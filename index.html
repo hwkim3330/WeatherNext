@@ -822,13 +822,23 @@
         setLoading('Building LSTM model...', 20);
 
         const model = tf.sequential();
-        model.add(tf.layers.lstm({ units: 64, inputShape: [5, 4], returnSequences: true }));
+        model.add(tf.layers.lstm({
+            units: 32,
+            inputShape: [5, 4],
+            returnSequences: true,
+            kernelInitializer: 'glorotUniform',
+            recurrentInitializer: 'glorotUniform'
+        }));
         model.add(tf.layers.dropout({ rate: 0.2 }));
-        model.add(tf.layers.lstm({ units: 32 }));
-        model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
+        model.add(tf.layers.lstm({
+            units: 16,
+            kernelInitializer: 'glorotUniform',
+            recurrentInitializer: 'glorotUniform'
+        }));
+        model.add(tf.layers.dense({ units: 8, activation: 'relu' }));
         model.add(tf.layers.dense({ units: 4 })); // lat, lon, wind, pressure
 
-        model.compile({ optimizer: tf.train.adam(0.001), loss: 'mse' });
+        model.compile({ optimizer: tf.train.adam(0.001), loss: 'meanSquaredError' });
 
         setLoading('Training on historical data...', 35);
 

@@ -33,7 +33,8 @@ export class CyclonePredictor {
             units: CONFIG.MODEL.LSTM_UNITS_1,
             inputShape: [5, 4], // 5 timesteps, 4 features (lat, lon, wind, pressure)
             returnSequences: true,
-            kernelInitializer: 'glorotUniform'
+            kernelInitializer: 'glorotUniform',
+            recurrentInitializer: 'glorotUniform'
         }));
 
         // Dropout for regularization
@@ -42,7 +43,9 @@ export class CyclonePredictor {
         // Layer 2: LSTM
         this.model.add(tf.layers.lstm({
             units: CONFIG.MODEL.LSTM_UNITS_2,
-            returnSequences: false
+            returnSequences: false,
+            kernelInitializer: 'glorotUniform',
+            recurrentInitializer: 'glorotUniform'
         }));
 
         // Dense layer

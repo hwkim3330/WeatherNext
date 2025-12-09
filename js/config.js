@@ -6,11 +6,11 @@ export const CONFIG = {
     // TensorFlow.js settings
     TF_BACKEND: 'wasm', // 'webgl', 'wasm', 'cpu'
 
-    // Model settings
+    // Model settings (reduced units to avoid slow Orthogonal initializer)
     MODEL: {
-        LSTM_UNITS_1: 64,
-        LSTM_UNITS_2: 32,
-        DENSE_UNITS: 16,
+        LSTM_UNITS_1: 32,
+        LSTM_UNITS_2: 16,
+        DENSE_UNITS: 8,
         EPOCHS: 15,
         BATCH_SIZE: 32,
         LEARNING_RATE: 0.001
