@@ -52,19 +52,23 @@ export class GlobeRenderer {
     }
 
     createGlobe() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 2048;
-        canvas.height = 1024;
-        const ctx = canvas.getContext('2d');
+        // Earth texture URLs
+        this.earthTextures = {
+            dark: 'https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
+            light: 'https://unpkg.com/three-globe@2.31.1/example/img/earth-day.jpg'
+        };
 
-        this.globeCanvas = canvas;
-        this.globeCtx = ctx;
-        this.drawGlobeTexture();
+        const textureLoader = new THREE.TextureLoader();
+        const earthTexture = textureLoader.load(
+            this.earthTextures.dark,
+            () => console.log('Earth texture loaded'),
+            undefined,
+            () => this.createFallbackTexture()
+        );
 
-        const texture = new THREE.CanvasTexture(canvas);
         this.globe = new THREE.Mesh(
             new THREE.SphereGeometry(1, 64, 64),
-            new THREE.MeshPhongMaterial({ map: texture, shininess: 10 })
+            new THREE.MeshPhongMaterial({ map: earthTexture, shininess: 5 })
         );
         this.scene.add(this.globe);
 
@@ -72,62 +76,30 @@ export class GlobeRenderer {
         this.globe.rotation.y = Math.PI * 0.4;
     }
 
-    drawGlobeTexture() {
-        const ctx = this.globeCtx;
-        const w = 2048, h = 1024;
-        const theme = this.isDark ? THEMES.dark : THEMES.light;
+    createFallbackTexture() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
 
-        // Ocean
-        ctx.fillStyle = theme.ocean;
-        ctx.fillRect(0, 0, w, h);
+        const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+        gradient.addColorStop(0, '#1a4a6e');
+        gradient.addColorStop(0.5, '#0a2a4e');
+        gradient.addColorStop(1, '#1a4a6e');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 1024, 512);
 
-        // Grid
-        ctx.strokeStyle = this.isDark ? 'rgba(100,150,200,0.15)' : 'rgba(0,50,100,0.1)';
-        ctx.lineWidth = 1;
-        for (let lat = 0; lat <= h; lat += h / 18) {
-            ctx.beginPath(); ctx.moveTo(0, lat); ctx.lineTo(w, lat); ctx.stroke();
-        }
-        for (let lon = 0; lon <= w; lon += w / 36) {
-            ctx.beginPath(); ctx.moveTo(lon, 0); ctx.lineTo(lon, h); ctx.stroke();
-        }
-
-        // Continents
-        ctx.fillStyle = theme.land;
-        ctx.strokeStyle = this.isDark ? 'rgba(80,140,100,0.6)' : 'rgba(60,120,80,0.8)';
-        ctx.lineWidth = 2;
-
-        // Continent shapes
-        const continents = [
-            // North America
-            [[280, 150], [380, 130], [480, 150], [520, 200], [500, 280], [450, 350], [400, 380], [350, 400], [300, 380], [280, 340], [260, 280], [230, 230], [250, 180], [280, 150]],
-            // Central America
-            [[350, 400], [380, 420], [390, 450], [370, 480], [340, 470], [350, 400]],
-            // South America
-            [[380, 480], [420, 470], [450, 500], [470, 550], [460, 620], [430, 700], [380, 720], [350, 680], [340, 600], [350, 530], [380, 480]],
-            // Europe
-            [[980, 180], [1020, 160], [1080, 170], [1100, 200], [1080, 250], [1020, 280], [980, 270], [960, 230], [980, 180]],
-            // Africa
-            [[980, 280], [1040, 270], [1100, 300], [1120, 380], [1100, 480], [1050, 550], [1000, 560], [960, 520], [940, 440], [950, 360], [980, 280]],
-            // Asia
-            [[1100, 120], [1200, 100], [1350, 110], [1450, 150], [1500, 200], [1480, 280], [1400, 320], [1300, 340], [1200, 320], [1150, 280], [1100, 200], [1100, 120]],
-            // India
-            [[1200, 320], [1250, 340], [1270, 400], [1240, 450], [1200, 430], [1180, 380], [1200, 320]],
-            // Southeast Asia
-            [[1350, 350], [1400, 360], [1420, 420], [1380, 450], [1340, 420], [1350, 350]],
-            // Australia
-            [[1450, 500], [1520, 480], [1580, 510], [1600, 570], [1560, 630], [1500, 640], [1450, 600], [1430, 550], [1450, 500]],
-            // Japan
-            [[1520, 220], [1540, 200], [1560, 220], [1550, 260], [1520, 250], [1520, 220]]
-        ];
-
-        continents.forEach(pts => {
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+        for (let i = 0; i < 18; i++) {
             ctx.beginPath();
-            ctx.moveTo(pts[0][0], pts[0][1]);
-            for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-            ctx.closePath();
-            ctx.fill();
+            ctx.moveTo(0, i * 512/18);
+            ctx.lineTo(1024, i * 512/18);
             ctx.stroke();
-        });
+        }
+
+        const texture = new THREE.CanvasTexture(canvas);
+        this.globe.material.map = texture;
+        this.globe.material.needsUpdate = true;
     }
 
     createAtmosphere() {
@@ -272,8 +244,14 @@ export class GlobeRenderer {
         const theme = isDark ? THEMES.dark : THEMES.light;
 
         this.scene.background = new THREE.Color(theme.globeBg);
-        this.drawGlobeTexture();
-        this.globe.material.map.needsUpdate = true;
+
+        // Load appropriate Earth texture
+        const textureUrl = isDark ? this.earthTextures.dark : this.earthTextures.light;
+        const loader = new THREE.TextureLoader();
+        loader.load(textureUrl, (texture) => {
+            this.globe.material.map = texture;
+            this.globe.material.needsUpdate = true;
+        });
     }
 
     animate() {

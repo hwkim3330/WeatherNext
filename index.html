@@ -974,27 +974,30 @@
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         container.appendChild(renderer.domElement);
 
-        // Create globe texture
-        const canvas = document.createElement('canvas');
-        canvas.width = 2048;
-        canvas.height = 1024;
-        const ctx = canvas.getContext('2d');
+        // Load NASA Earth texture
+        const textureLoader = new THREE.TextureLoader();
+        const earthTexture = textureLoader.load(
+            'https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
+            () => console.log('Earth texture loaded'),
+            undefined,
+            () => {
+                // Fallback: create simple texture if load fails
+                console.warn('Earth texture failed, using fallback');
+                createFallbackTexture();
+            }
+        );
 
-        updateGlobeTexture(ctx);
-
-        const texture = new THREE.CanvasTexture(canvas);
         globe = new THREE.Mesh(
             new THREE.SphereGeometry(1, 64, 64),
-            new THREE.MeshPhongMaterial({ map: texture, shininess: 10 })
+            new THREE.MeshPhongMaterial({ map: earthTexture, shininess: 5 })
         );
         scene.add(globe);
 
         // Initial rotation to show Caribbean/Atlantic region (Hurricane Beryl area)
         globe.rotation.y = Math.PI * 0.4; // Rotate to show Americas
 
-        // Store canvas for theme updates
-        globe.userData.canvas = canvas;
-        globe.userData.ctx = ctx;
+        // Store for theme updates
+        globe.userData.textureLoader = textureLoader;
 
         // Atmosphere
         const atmo = new THREE.Mesh(
@@ -1056,60 +1059,48 @@
         });
     }
 
-    function updateGlobeTexture(ctx) {
-        const w = 2048, h = 1024;
-        const ocean = getComputedStyle(document.body).getPropertyValue('--ocean').trim() || '#0a1628';
-        const land = getComputedStyle(document.body).getPropertyValue('--land').trim() || 'rgba(40,80,60,0.9)';
+    function createFallbackTexture() {
+        // Simple fallback if NASA texture fails to load
+        const canvas = document.createElement('canvas');
+        canvas.width = 1024;
+        canvas.height = 512;
+        const ctx = canvas.getContext('2d');
 
-        // Ocean
-        ctx.fillStyle = ocean;
-        ctx.fillRect(0, 0, w, h);
+        // Ocean gradient
+        const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+        gradient.addColorStop(0, '#1a4a6e');
+        gradient.addColorStop(0.5, '#0a2a4e');
+        gradient.addColorStop(1, '#1a4a6e');
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, 1024, 512);
 
-        // Grid
-        ctx.strokeStyle = isDark ? 'rgba(100,150,200,0.15)' : 'rgba(0,50,100,0.1)';
+        // Simple grid
+        ctx.strokeStyle = 'rgba(255,255,255,0.1)';
         ctx.lineWidth = 1;
-        for (let lat = 0; lat <= h; lat += h/18) {
-            ctx.beginPath(); ctx.moveTo(0, lat); ctx.lineTo(w, lat); ctx.stroke();
+        for (let i = 0; i < 18; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, i * 512/18);
+            ctx.lineTo(1024, i * 512/18);
+            ctx.stroke();
         }
-        for (let lon = 0; lon <= w; lon += w/36) {
-            ctx.beginPath(); ctx.moveTo(lon, 0); ctx.lineTo(lon, h); ctx.stroke();
+        for (let i = 0; i < 36; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * 1024/36, 0);
+            ctx.lineTo(i * 1024/36, 512);
+            ctx.stroke();
         }
 
-        // Continents (accurate shapes)
-        ctx.fillStyle = land;
-        ctx.strokeStyle = isDark ? 'rgba(80,140,100,0.6)' : 'rgba(60,120,80,0.8)';
-        ctx.lineWidth = 2;
-
-        // North America
-        drawShape(ctx, [[280,150],[380,130],[480,150],[520,200],[500,280],[450,350],[400,380],[350,400],[300,380],[280,340],[260,280],[230,230],[250,180],[280,150]]);
-        // Central America
-        drawShape(ctx, [[350,400],[380,420],[390,450],[370,480],[340,470],[350,400]]);
-        // South America
-        drawShape(ctx, [[380,480],[420,470],[450,500],[470,550],[460,620],[430,700],[380,720],[350,680],[340,600],[350,530],[380,480]]);
-        // Europe
-        drawShape(ctx, [[980,180],[1020,160],[1080,170],[1100,200],[1080,250],[1020,280],[980,270],[960,230],[980,180]]);
-        // Africa
-        drawShape(ctx, [[980,280],[1040,270],[1100,300],[1120,380],[1100,480],[1050,550],[1000,560],[960,520],[940,440],[950,360],[980,280]]);
-        // Asia
-        drawShape(ctx, [[1100,120],[1200,100],[1350,110],[1450,150],[1500,200],[1480,280],[1400,320],[1300,340],[1200,320],[1150,280],[1100,200],[1100,120]]);
-        // India
-        drawShape(ctx, [[1200,320],[1250,340],[1270,400],[1240,450],[1200,430],[1180,380],[1200,320]]);
-        // Southeast Asia
-        drawShape(ctx, [[1350,350],[1400,360],[1420,420],[1380,450],[1340,420],[1350,350]]);
-        // Australia
-        drawShape(ctx, [[1450,500],[1520,480],[1580,510],[1600,570],[1560,630],[1500,640],[1450,600],[1430,550],[1450,500]]);
-        // Japan
-        drawShape(ctx, [[1520,220],[1540,200],[1560,220],[1550,260],[1520,250],[1520,220]]);
+        const texture = new THREE.CanvasTexture(canvas);
+        globe.material.map = texture;
+        globe.material.needsUpdate = true;
     }
 
-    function drawShape(ctx, pts) {
-        ctx.beginPath();
-        ctx.moveTo(pts[0][0], pts[0][1]);
-        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-        ctx.closePath();
-        ctx.fill();
-        ctx.stroke();
-    }
+    // Earth textures for different themes
+    const EARTH_TEXTURES = {
+        dark: 'https://unpkg.com/three-globe@2.31.1/example/img/earth-blue-marble.jpg',
+        light: 'https://unpkg.com/three-globe@2.31.1/example/img/earth-day.jpg',
+        night: 'https://unpkg.com/three-globe@2.31.1/example/img/earth-night.jpg'
+    };
 
     function latLonTo3D(lat, lon, r = 1.01) {
         const phi = (90 - lat) * Math.PI / 180;
@@ -1381,10 +1372,14 @@
             document.body.setAttribute('data-theme', isDark ? '' : 'light');
             document.getElementById('themeToggle').textContent = isDark ? '🌙' : '☀️';
 
-            // Update globe texture
-            if (globe?.userData?.ctx) {
-                updateGlobeTexture(globe.userData.ctx);
-                globe.material.map.needsUpdate = true;
+            // Update globe texture based on theme
+            if (globe) {
+                const textureUrl = isDark ? EARTH_TEXTURES.dark : EARTH_TEXTURES.light;
+                const loader = new THREE.TextureLoader();
+                loader.load(textureUrl, (texture) => {
+                    globe.material.map = texture;
+                    globe.material.needsUpdate = true;
+                });
             }
 
             // Update scene background
