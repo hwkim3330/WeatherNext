@@ -989,6 +989,9 @@
         );
         scene.add(globe);
 
+        // Initial rotation to show Caribbean/Atlantic region (Hurricane Beryl area)
+        globe.rotation.y = Math.PI * 0.4; // Rotate to show Americas
+
         // Store canvas for theme updates
         globe.userData.canvas = canvas;
         globe.userData.ctx = ctx;
@@ -1126,36 +1129,36 @@
 
         // Track line
         const curve = new THREE.CatmullRomCurve3(pts);
-        const geom = new THREE.TubeGeometry(curve, pts.length * 8, 0.006, 8, false);
-        const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.85 });
+        const geom = new THREE.TubeGeometry(curve, pts.length * 8, 0.008, 8, false);
+        const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.9 });
         const tube = new THREE.Mesh(geom, mat);
-        scene.add(tube);
+        globe.add(tube); // Add to globe so it rotates with globe
         trackMeshes.push(tube);
 
         // Current position marker
         const lastPt = pts[pts.length - 1];
         const marker = new THREE.Mesh(
-            new THREE.SphereGeometry(0.018, 16, 16),
+            new THREE.SphereGeometry(0.025, 16, 16),
             new THREE.MeshBasicMaterial({ color: new THREE.Color(color) })
         );
         marker.position.copy(lastPt);
-        scene.add(marker);
+        globe.add(marker); // Add to globe
         trackMeshes.push(marker);
 
         // Glow effect for marker
         const glow = new THREE.Mesh(
-            new THREE.SphereGeometry(0.025, 16, 16),
-            new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.3 })
+            new THREE.SphereGeometry(0.035, 16, 16),
+            new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.4 })
         );
         glow.position.copy(lastPt);
-        scene.add(glow);
+        globe.add(glow); // Add to globe
         trackMeshes.push(glow);
     }
 
     function updateVisualization() {
-        // Clear old tracks
+        // Clear old tracks from globe
         trackMeshes.forEach(m => {
-            scene.remove(m);
+            globe.remove(m);
             m.geometry?.dispose();
             m.material?.dispose();
         });

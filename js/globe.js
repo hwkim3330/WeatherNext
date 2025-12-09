@@ -67,6 +67,9 @@ export class GlobeRenderer {
             new THREE.MeshPhongMaterial({ map: texture, shininess: 10 })
         );
         this.scene.add(this.globe);
+
+        // Initial rotation to show Caribbean/Atlantic region
+        this.globe.rotation.y = Math.PI * 0.4;
     }
 
     drawGlobeTexture() {
@@ -209,39 +212,39 @@ export class GlobeRenderer {
 
         // Track line
         const curve = new THREE.CatmullRomCurve3(pts);
-        const geom = new THREE.TubeGeometry(curve, pts.length * 8, 0.006, 8, false);
+        const geom = new THREE.TubeGeometry(curve, pts.length * 8, 0.008, 8, false);
         const mat = new THREE.MeshBasicMaterial({
             color: new THREE.Color(color),
             transparent: true,
-            opacity: 0.85
+            opacity: 0.9
         });
         const tube = new THREE.Mesh(geom, mat);
-        this.scene.add(tube);
+        this.globe.add(tube); // Add to globe so it rotates with globe
         this.tracks.push(tube);
 
         // Current position marker
         const lastPt = pts[pts.length - 1];
         const marker = new THREE.Mesh(
-            new THREE.SphereGeometry(0.018, 16, 16),
+            new THREE.SphereGeometry(0.025, 16, 16),
             new THREE.MeshBasicMaterial({ color: new THREE.Color(color) })
         );
         marker.position.copy(lastPt);
-        this.scene.add(marker);
+        this.globe.add(marker); // Add to globe
         this.tracks.push(marker);
 
         // Glow
         const glow = new THREE.Mesh(
-            new THREE.SphereGeometry(0.025, 16, 16),
-            new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.3 })
+            new THREE.SphereGeometry(0.035, 16, 16),
+            new THREE.MeshBasicMaterial({ color: new THREE.Color(color), transparent: true, opacity: 0.4 })
         );
         glow.position.copy(lastPt);
-        this.scene.add(glow);
+        this.globe.add(glow); // Add to globe
         this.tracks.push(glow);
     }
 
     clearTracks() {
         this.tracks.forEach(m => {
-            this.scene.remove(m);
+            this.globe.remove(m); // Remove from globe
             m.geometry?.dispose();
             m.material?.dispose();
         });
