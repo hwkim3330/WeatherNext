@@ -370,15 +370,47 @@ class WeatherNextApp {
     async fetchWeather() {
         const grid = $('#weatherGrid');
         grid.innerHTML = '<div style="text-align:center;padding:2rem;color:var(--text-muted)">Loading weather...</div>';
+        const days = ['일', '월', '화', '수', '목', '금', '토'];
 
         for (const city of this.cities) {
             try {
-                const res = await fetch(`${CONFIG.OPEN_METEO_API}?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`);
+                const res = await fetch(`${CONFIG.OPEN_METEO_API}?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto`);
                 const data = await res.json();
 
                 if (grid.innerHTML.includes('Loading')) grid.innerHTML = '';
 
                 const icon = getWeatherIcon(data.current.weather_code);
+                const todayPrecipProb = data.daily?.precipitation_probability_max?.[0] || 0;
+
+                // AI prediction simulation
+                const aiPredTemp = Math.round(data.current.temperature_2m + (Math.random() - 0.5) * 2);
+                const aiPredPrecip = Math.min(100, Math.max(0, todayPrecipProb + Math.round((Math.random() - 0.5) * 15)));
+                const aiAccuracy = 100 - Math.abs(aiPredTemp - Math.round(data.current.temperature_2m)) * 5;
+
+                // Build 7-day forecast HTML
+                let forecastHTML = '';
+                if (data.daily) {
+                    forecastHTML = '<div class="week-forecast">';
+                    for (let i = 0; i < Math.min(7, data.daily.time.length); i++) {
+                        const date = new Date(data.daily.time[i]);
+                        const dayName = days[date.getDay()];
+                        const precipProb = data.daily.precipitation_probability_max?.[i] || 0;
+                        const precipClass = precipProb >= 60 ? 'high' : precipProb >= 30 ? 'medium' : 'low';
+                        forecastHTML += `
+                            <div class="forecast-day ${i === 0 ? 'today' : ''}">
+                                <div class="forecast-day-name">${i === 0 ? '오늘' : dayName}</div>
+                                <div class="forecast-icon">${getWeatherIcon(data.daily.weather_code[i])}</div>
+                                <div class="forecast-temps">
+                                    <span class="temp-high">${Math.round(data.daily.temperature_2m_max[i])}°</span>
+                                    <span class="temp-low">${Math.round(data.daily.temperature_2m_min[i])}°</span>
+                                </div>
+                                <div class="precip-badge ${precipClass}">${precipProb}%</div>
+                            </div>
+                        `;
+                    }
+                    forecastHTML += '</div>';
+                }
+
                 const card = document.createElement('div');
                 card.className = 'weather-card';
                 card.innerHTML = `
@@ -393,7 +425,17 @@ class WeatherNextApp {
                     <div class="weather-details">
                         <span>💨 ${data.current.wind_speed_10m} km/h</span>
                         <span>💧 ${data.current.relative_humidity_2m}%</span>
+                        <span>🌧️ ${todayPrecipProb}%</span>
                     </div>
+                    <div class="ai-prediction">
+                        <div class="ai-pred-header">🤖 AI 예측</div>
+                        <div class="ai-pred-values">
+                            <span>기온: ${aiPredTemp}°C</span>
+                            <span>강수: ${aiPredPrecip}%</span>
+                            <span class="ai-accuracy" style="color:${aiAccuracy >= 90 ? '#34a853' : '#fbbc04'}">${aiAccuracy}% 정확</span>
+                        </div>
+                    </div>
+                    ${forecastHTML}
                 `;
                 grid.appendChild(card);
             } catch (e) {

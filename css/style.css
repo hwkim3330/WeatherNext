@@ -470,9 +470,91 @@ footer a:hover { text-decoration: underline; }
     flex-wrap: wrap;
 }
 
+/* 7-Day Forecast */
+.week-forecast {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    gap: 0.25rem;
+}
+.forecast-day {
+    flex: 1;
+    text-align: center;
+    padding: 0.5rem 0.25rem;
+    border-radius: 8px;
+    transition: background 0.3s;
+}
+.forecast-day.today {
+    background: var(--bg-card-hover);
+}
+.forecast-day-name {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+.forecast-icon {
+    font-size: 1.2rem;
+    margin: 0.25rem 0;
+}
+.forecast-temps {
+    font-size: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.temp-high { color: var(--danger); font-weight: 500; }
+.temp-low { color: var(--accent); }
+.precip-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.6rem;
+    margin-top: 4px;
+    background: rgba(66,133,244,0.2);
+    color: var(--accent);
+}
+.precip-badge.high {
+    background: rgba(239,68,68,0.2);
+    color: var(--danger);
+}
+.precip-badge.medium {
+    background: rgba(251,188,4,0.2);
+    color: var(--warning);
+}
+.precip-badge.low {
+    background: rgba(52,168,83,0.2);
+    color: var(--success);
+}
+
+/* AI Prediction */
+.ai-prediction {
+    background: var(--bg-card);
+    border-radius: 8px;
+    padding: 0.75rem;
+    margin-top: 0.75rem;
+}
+.ai-pred-header {
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+}
+.ai-pred-values {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+}
+.ai-accuracy {
+    font-weight: 600;
+}
+
 /* Mobile */
 @media (max-width: 768px) {
     .container { padding: 1rem; }
     .globe-card { min-height: 350px; }
     .header-controls .btn span { display: none; }
+    .week-forecast { flex-wrap: wrap; }
+    .forecast-day { min-width: 13%; }
 }
