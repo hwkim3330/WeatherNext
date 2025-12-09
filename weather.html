@@ -92,7 +92,7 @@
             border-radius: 12px;
             margin-left: 8px;
         }
-        .nav { display: flex; gap: 0.75rem; }
+        .nav { display: flex; gap: 0.75rem; align-items: center; }
         .btn {
             padding: 8px 16px;
             border: 1px solid var(--border);
@@ -107,6 +107,19 @@
         .btn:hover { border-color: var(--accent); background: rgba(88, 166, 255, 0.1); }
         .btn-primary { background: var(--rain); border-color: var(--rain); }
         .btn-primary:hover { background: var(--rain-light); }
+        .theme-toggle {
+            width: 36px; height: 36px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--bg-card);
+            cursor: pointer;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .theme-toggle:hover { border-color: var(--accent); }
 
         /* Main */
         .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem; }
@@ -427,12 +440,102 @@
         footer a { color: var(--accent); text-decoration: none; }
         footer a:hover { text-decoration: underline; }
 
+        /* Light Theme */
+        body.light {
+            --bg: #f8fafc;
+            --bg-card: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --muted: #64748b;
+            --accent: #2563eb;
+            --rain: #3b82f6;
+            --rain-light: #60a5fa;
+        }
+        body.light { background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); }
+        body.light header { background: rgba(255, 255, 255, 0.9); }
+        body.light .globe-container { background: radial-gradient(ellipse at center, #e0f2fe 0%, #f1f5f9 100%); }
+        body.light .ai-section { background: rgba(59, 130, 246, 0.05); border-color: rgba(59, 130, 246, 0.2); }
+        body.light .ai-box { background: rgba(0,0,0,0.03); }
+
+        /* Date Picker */
+        .date-picker {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 4px 12px;
+        }
+        .date-picker input {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 0.9rem;
+            cursor: pointer;
+            outline: none;
+        }
+        .date-picker input::-webkit-calendar-picker-indicator {
+            filter: invert(0.5);
+            cursor: pointer;
+        }
+        body.light .date-picker input::-webkit-calendar-picker-indicator {
+            filter: none;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
-            .container { padding: 1rem; }
-            .stats-row { grid-template-columns: repeat(2, 1fr); }
-            .weather-grid { grid-template-columns: 1fr; }
+            header { padding: 0.75rem 1rem; flex-wrap: wrap; gap: 0.5rem; }
+            .logo { font-size: 1.1rem; }
+            .logo-icon { font-size: 1.4rem; }
+            .logo-badge { font-size: 0.55rem; padding: 2px 6px; }
+            .nav { flex-wrap: wrap; gap: 0.5rem; }
+            .nav .btn { padding: 6px 10px; font-size: 0.75rem; }
             .nav .btn span { display: none; }
+            .container { padding: 0.75rem; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+            .stat-card { padding: 0.75rem; }
+            .stat-icon { font-size: 1.5rem; }
+            .stat-value { font-size: 1.4rem; }
+            .stat-label { font-size: 0.7rem; }
+            .top-section { gap: 1rem; }
+            .card-header { padding: 0.75rem 1rem; font-size: 0.85rem; }
+            .card-body { padding: 1rem; }
+            .globe-container { height: 280px; }
+            .chart-container { height: 280px; }
+            .section-header { flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+            .section-title { font-size: 1rem; }
+            .weather-grid { grid-template-columns: 1fr; gap: 0.75rem; }
+            .weather-card { padding: 1rem; }
+            .city-name { font-size: 1rem; }
+            .weather-icon { font-size: 2.2rem; }
+            .current-temp { font-size: 2.2rem; }
+            .current-details { gap: 0.75rem; font-size: 0.8rem; }
+            .ai-section { padding: 0.75rem; }
+            .ai-compare { gap: 0.5rem; }
+            .ai-box { padding: 0.5rem; }
+            .ai-box-value { font-size: 1rem; }
+            .forecast-day { padding: 0.4rem 0.15rem; }
+            .forecast-day-name { font-size: 0.55rem; }
+            .forecast-icon { font-size: 1rem; }
+            .forecast-temps { font-size: 0.65rem; }
+            .forecast-precip { font-size: 0.55rem; padding: 1px 4px; }
+            .accuracy-card { padding: 1rem; }
+            .accuracy-title { font-size: 0.95rem; }
+            .accuracy-grid { grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
+            .accuracy-item { padding: 0.75rem; }
+            .accuracy-name { font-size: 0.75rem; }
+            .accuracy-value { font-size: 1.1rem; }
+            footer { padding: 1rem; font-size: 0.75rem; }
+            .date-picker { padding: 2px 8px; }
+            .date-picker input { font-size: 0.8rem; }
+        }
+
+        @media (max-width: 480px) {
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .globe-container { height: 220px; }
+            .chart-container { height: 220px; }
+            .accuracy-grid { grid-template-columns: 1fr 1fr; }
         }
     </style>
 </head>
@@ -451,6 +554,11 @@
             <span class="logo-badge">AI 강수예측</span>
         </div>
         <nav class="nav">
+            <div class="date-picker">
+                <span>📅</span>
+                <input type="date" id="forecastDate" title="예측 날짜 선택">
+            </div>
+            <button class="theme-toggle" id="themeToggle" title="테마 전환">🌙</button>
             <a href="index.html" class="btn"><span>🌀 </span>허리케인</a>
             <a href="light.html" class="btn"><span>⚡ </span>Light</a>
             <a href="https://github.com/hwkim3330/WeatherNext" class="btn btn-primary" target="_blank">GitHub</a>
@@ -575,6 +683,8 @@
     let precipChart;
     let model;
     let aiAccuracies = [];
+    let selectedDate = new Date();
+    let forecastDayOffset = 0; // 0 = today, 1-6 = future days
 
     // ============================================
     // INITIALIZATION
@@ -932,7 +1042,7 @@
 
                 // Get AI prediction
                 const aiPredPrecip = await predictPrecipitation(hourlyInput);
-                const actualPrecipProb = data.daily?.precipitation_probability_max?.[0] || 0;
+                const actualPrecipProb = data.daily?.precipitation_probability_max?.[forecastDayOffset] || 0;
 
                 // Calculate accuracy
                 const accuracy = Math.max(0, 100 - Math.abs(aiPredPrecip - actualPrecipProb));
@@ -952,8 +1062,8 @@
                 // Add marker to globe
                 addWeatherMarker(city.lat, city.lon, actualPrecipProb, city.name);
 
-                // Create weather card
-                const card = createWeatherCard(city, data, aiPredPrecip, actualPrecipProb, accuracy);
+                // Create weather card with selected date
+                const card = createWeatherCard(city, data, aiPredPrecip, actualPrecipProb, accuracy, forecastDayOffset);
                 grid.appendChild(card);
 
             } catch (e) {
@@ -974,17 +1084,25 @@
         updateStats(rainyCities);
     }
 
-    function createWeatherCard(city, data, aiPredPrecip, actualPrecipProb, accuracy) {
-        const icon = getWeatherIcon(data.current.weather_code);
+    function createWeatherCard(city, data, aiPredPrecip, actualPrecipProb, accuracy, dayOffset = 0) {
+        // Use selected day's data
+        const selectedTemp = dayOffset === 0
+            ? data.current.temperature_2m
+            : (data.daily.temperature_2m_max[dayOffset] + data.daily.temperature_2m_min[dayOffset]) / 2;
+        const selectedIcon = getWeatherIcon(dayOffset === 0 ? data.current.weather_code : data.daily.weather_code[dayOffset]);
+
         const precipClass = actualPrecipProb >= 60 ? 'high' : actualPrecipProb >= 30 ? 'medium' : 'low';
         const aiDiff = aiPredPrecip - actualPrecipProb;
         const diffClass = Math.abs(aiDiff) <= 5 ? 'correct' : Math.abs(aiDiff) <= 15 ? 'close' : 'off';
         const accClass = accuracy >= 90 ? 'high' : 'medium';
 
         // AI temp prediction
-        const aiPredTemp = Math.round(data.current.temperature_2m + (Math.random() - 0.5) * 2);
-        const tempDiff = aiPredTemp - Math.round(data.current.temperature_2m);
+        const aiPredTemp = Math.round(selectedTemp + (Math.random() - 0.5) * 2);
+        const tempDiff = aiPredTemp - Math.round(selectedTemp);
         const tempDiffClass = Math.abs(tempDiff) === 0 ? 'correct' : Math.abs(tempDiff) <= 1 ? 'close' : 'off';
+
+        // Date label
+        const dateLabel = dayOffset === 0 ? '오늘' : `${dayOffset}일 후`;
 
         // Build 7-day forecast
         let forecastHTML = '<div class="forecast-row">';
@@ -995,7 +1113,7 @@
             const pClass = precip >= 60 ? 'high' : precip >= 30 ? 'medium' : 'low';
 
             forecastHTML += `
-                <div class="forecast-day ${i === 0 ? 'today' : ''}">
+                <div class="forecast-day ${i === dayOffset ? 'today' : ''}">
                     <div class="forecast-day-name">${i === 0 ? '오늘' : dayName}</div>
                     <div class="forecast-icon">${getWeatherIcon(data.daily.weather_code[i])}</div>
                     <div class="forecast-temps">
@@ -1022,11 +1140,11 @@
             <div class="weather-header">
                 <div>
                     <div class="city-name">${city.name}</div>
-                    <div class="city-country">${city.country}</div>
+                    <div class="city-country">${city.country}${dayOffset > 0 ? ` · ${dateLabel}` : ''}</div>
                 </div>
-                <div class="weather-icon">${icon}</div>
+                <div class="weather-icon">${selectedIcon}</div>
             </div>
-            <div class="current-temp">${Math.round(data.current.temperature_2m)}°C</div>
+            <div class="current-temp">${Math.round(selectedTemp)}°C</div>
             <div class="current-details">
                 <span>💨 ${data.current.wind_speed_10m} km/h</span>
                 <span>💧 ${data.current.relative_humidity_2m}%</span>
@@ -1034,7 +1152,7 @@
 
             <div class="precip-section">
                 <div class="precip-header">
-                    <div class="precip-title">🌧️ 오늘 강수확률</div>
+                    <div class="precip-title">🌧️ ${dateLabel} 강수확률</div>
                     <div class="precip-value ${precipClass}">${actualPrecipProb}%</div>
                 </div>
                 <div class="precip-bar">
@@ -1095,7 +1213,74 @@
 
     window.refreshWeather = fetchAllWeather;
 
+    // ============================================
+    // THEME TOGGLE
+    // ============================================
+    function initTheme() {
+        const saved = localStorage.getItem('weatherTheme');
+        if (saved === 'light') {
+            document.body.classList.add('light');
+            document.getElementById('themeToggle').textContent = '☀️';
+        }
+    }
+
+    function toggleTheme() {
+        const isLight = document.body.classList.toggle('light');
+        document.getElementById('themeToggle').textContent = isLight ? '☀️' : '🌙';
+        localStorage.setItem('weatherTheme', isLight ? 'light' : 'dark');
+
+        // Update globe background
+        if (scene) {
+            scene.background = new THREE.Color(isLight ? 0xf1f5f9 : 0x0d1117);
+        }
+
+        // Update chart colors
+        if (precipChart) {
+            const textColor = isLight ? '#64748b' : '#8b949e';
+            const gridColor = isLight ? 'rgba(226,232,240,0.8)' : 'rgba(48,54,61,0.5)';
+            precipChart.options.scales.x.grid.color = gridColor;
+            precipChart.options.scales.y.grid.color = gridColor;
+            precipChart.options.scales.x.ticks.color = textColor;
+            precipChart.options.scales.y.ticks.color = textColor;
+            precipChart.options.scales.y.title.color = textColor;
+            precipChart.options.plugins.legend.labels.color = textColor;
+            precipChart.update();
+        }
+    }
+
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+    // ============================================
+    // DATE PICKER
+    // ============================================
+    function initDatePicker() {
+        const dateInput = document.getElementById('forecastDate');
+        const today = new Date();
+        const maxDate = new Date(today);
+        maxDate.setDate(today.getDate() + 6); // 7 days forecast max
+
+        // Format dates for input
+        dateInput.value = today.toISOString().split('T')[0];
+        dateInput.min = today.toISOString().split('T')[0];
+        dateInput.max = maxDate.toISOString().split('T')[0];
+
+        dateInput.addEventListener('change', function() {
+            const selected = new Date(this.value);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            selected.setHours(0, 0, 0, 0);
+
+            forecastDayOffset = Math.round((selected - today) / (1000 * 60 * 60 * 24));
+            forecastDayOffset = Math.max(0, Math.min(6, forecastDayOffset));
+
+            selectedDate = selected;
+            fetchAllWeather();
+        });
+    }
+
     // Start
+    initTheme();
+    initDatePicker();
     init();
     </script>
 </body>
