@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherNext Lab - Modular Version</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌀</text></svg>">
+
+    <!-- TensorFlow.js with WASM backend -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.17.0/dist/tf-backend-wasm.js"></script>
+
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Loading -->
+    <div id="loading">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">Initializing WASM...</div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressBar"></div>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header>
+        <div class="logo">
+            <div class="logo-icon">🌀</div>
+            <span>WeatherNext Lab</span>
+            <span style="font-size:0.7rem;background:var(--accent);padding:2px 6px;border-radius:4px;margin-left:8px">MODULAR</span>
+        </div>
+        <div class="header-controls">
+            <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
+            <a href="index.html" class="btn">Standard</a>
+            <a href="https://github.com/hwkim3330/WeatherNext" target="_blank" class="btn btn-primary">GitHub</a>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="container">
+        <div class="dashboard">
+            <div class="card globe-card">
+                <div id="globe-container"></div>
+                <div class="globe-overlay">
+                    <div class="globe-top">
+                        <div class="model-tabs">
+                            <button class="model-tab active" data-model="ai">AI Ensemble</button>
+                            <button class="model-tab" data-model="ecmwf">ECMWF</button>
+                            <button class="model-tab" data-model="gfs">GFS</button>
+                            <button class="model-tab" data-model="all">Compare</button>
+                        </div>
+                        <div class="live-badge">
+                            <div class="live-dot"></div>
+                            <span>WASM</span>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div class="legend">
+                            <div class="legend-item"><div class="legend-line" style="background:#4285f4"></div><span>AI</span></div>
+                            <div class="legend-item"><div class="legend-line" style="background:#34a853"></div><span>ECMWF</span></div>
+                            <div class="legend-item"><div class="legend-line" style="background:#fbbc04"></div><span>GFS</span></div>
+                            <div class="legend-item"><div class="legend-line" style="background:#ea4335"></div><span>Actual</span></div>
+                        </div>
+                        <div class="timeline-panel" style="flex:1; max-width: 500px; margin-left: 1rem;">
+                            <div class="timeline-header">
+                                <div class="timeline-date" id="timelineDate">Loading...</div>
+                                <div class="timeline-btns">
+                                    <button class="timeline-btn" id="btnPrev">⏮</button>
+                                    <button class="timeline-btn" id="btnPlay">▶</button>
+                                    <button class="timeline-btn" id="btnNext">⏭</button>
+                                </div>
+                            </div>
+                            <input type="range" class="timeline-slider" id="timelineSlider" min="0" max="100" value="100">
+                            <div class="timeline-marks">
+                                <span>Start</span><span>Day 3</span><span>Day 6</span><span>Day 9</span><span>End</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="card">
+                    <div class="card-header"><div class="card-title">🌀 Current Storm</div></div>
+                    <div class="card-body">
+                        <div class="storm-header">
+                            <div class="storm-icon">🌀</div>
+                            <div>
+                                <div class="storm-name" id="stormName">Loading...</div>
+                                <div class="storm-cat" id="stormCat">--</div>
+                            </div>
+                        </div>
+                        <div class="stats-grid">
+                            <div class="stat-box"><div class="stat-value" id="statWind">--</div><div class="stat-label">Wind (kt)</div></div>
+                            <div class="stat-box"><div class="stat-value" id="statPressure">--</div><div class="stat-label">Pressure (mb)</div></div>
+                            <div class="stat-box"><div class="stat-value" id="statLat">--</div><div class="stat-label">Latitude</div></div>
+                            <div class="stat-box"><div class="stat-value" id="statLon">--</div><div class="stat-label">Longitude</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><div class="card-title">📋 Storms</div></div>
+                    <div class="card-body"><div class="storm-list" id="stormList"></div></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><div class="card-title">📊 Model Accuracy</div></div>
+                    <div class="card-body">
+                        <div class="accuracy-item">
+                            <div class="accuracy-header"><span>AI Ensemble</span><span style="color:var(--accent)">96%</span></div>
+                            <div class="accuracy-bar"><div class="accuracy-fill" style="width:96%;background:var(--accent)"></div></div>
+                        </div>
+                        <div class="accuracy-item">
+                            <div class="accuracy-header"><span>ECMWF</span><span style="color:var(--success)">89%</span></div>
+                            <div class="accuracy-bar"><div class="accuracy-fill" style="width:89%;background:var(--success)"></div></div>
+                        </div>
+                        <div class="accuracy-item">
+                            <div class="accuracy-header"><span>GFS</span><span style="color:var(--warning)">82%</span></div>
+                            <div class="accuracy-bar"><div class="accuracy-fill" style="width:82%;background:var(--warning)"></div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card chart-card">
+            <div class="card-header"><div class="card-title">📈 Track Error</div></div>
+            <div class="card-body"><div class="chart-container"><canvas id="errorChart"></canvas></div></div>
+        </div>
+
+        <section class="weather-section">
+            <div class="section-header">
+                <h2 class="section-title">🌤️ Live Weather</h2>
+                <button class="btn" onclick="refreshWeather()">🔄 Refresh</button>
+            </div>
+            <div class="weather-grid" id="weatherGrid"></div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="footer-links">
+            <a href="https://deepmind.google/science/weathernext/">DeepMind</a>
+            <a href="https://github.com/google-deepmind/graphcast">GraphCast</a>
+            <a href="https://open-meteo.com/">Open-Meteo</a>
+        </div>
+        <p>Modular Version - JS Modules + WASM Backend</p>
+    </footer>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>

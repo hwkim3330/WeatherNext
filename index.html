@@ -6,8 +6,9 @@
     <title>WeatherNext Lab - AI Cyclone Prediction</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌀</text></svg>">
 
-    <!-- TensorFlow.js -->
+    <!-- TensorFlow.js with WASM backend -->
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.17.0/dist/tf-backend-wasm.js"></script>
     <!-- Three.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <!-- Chart.js -->
@@ -512,8 +513,11 @@
         </div>
         <div class="header-controls">
             <button class="theme-toggle" id="themeToggle" title="Toggle theme">🌙</button>
-            <a href="https://deepmind.google/science/weathernext/" target="_blank" class="btn">
-                <span>About</span>
+            <a href="light.html" class="btn" title="Lightweight version">
+                <span>Light</span>
+            </a>
+            <a href="modular.html" class="btn" title="ES6 Modules version">
+                <span>Modular</span>
             </a>
             <a href="https://github.com/hwkim3330/WeatherNext" target="_blank" class="btn btn-primary">
                 <span>GitHub</span>
@@ -1417,8 +1421,23 @@
     // ============================================
     async function init() {
         try {
+            setLoading('Initializing WASM backend...', 5);
+            // Try WASM backend first, fallback to webgl
+            try {
+                await tf.setBackend('wasm');
+                await tf.ready();
+            } catch (wasmErr) {
+                console.warn('WASM backend failed, falling back to WebGL:', wasmErr);
+                await tf.setBackend('webgl');
+                await tf.ready();
+            }
+            console.log('TensorFlow.js backend:', tf.getBackend());
+
+            // Update live badge to show backend
+            const liveBadge = document.querySelector('.live-badge span');
+            if (liveBadge) liveBadge.textContent = tf.getBackend().toUpperCase();
+
             setLoading('Loading TensorFlow.js...', 10);
-            await tf.ready();
 
             aiModel = await buildModel();
             await generatePredictions();
@@ -1428,7 +1447,13 @@
             populateStormList();
 
             setLoading('Fetching weather...', 90);
-            await fetchWeather();
+            try {
+                await fetchWeather();
+            } catch (weatherErr) {
+                console.warn('Weather fetch failed:', weatherErr);
+                document.getElementById('weatherGrid').innerHTML =
+                    '<div style="text-align:center;padding:2rem;color:var(--text-muted)">Weather data unavailable</div>';
+            }
 
             setLoading('Initializing charts...', 95);
             initChart();
@@ -1443,6 +1468,10 @@
         } catch (err) {
             console.error('Init error:', err);
             setLoading('Error: ' + err.message, 0);
+            // Show error in UI but try to continue
+            setTimeout(() => {
+                document.getElementById('loading').classList.add('hidden');
+            }, 3000);
         }
     }
 

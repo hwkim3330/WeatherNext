@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeatherNext Lab - Light Version</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌀</text></svg>">
+
+    <!-- Lightweight: No TensorFlow, simpler visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --accent: #3b82f6;
+            --success: #22c55e;
+            --warning: #eab308;
+            --danger: #ef4444;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+        header {
+            background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo { font-size: 1.5rem; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .logo-icon { font-size: 2rem; }
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--card);
+            color: var(--text);
+            text-decoration: none;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        .btn:hover { border-color: var(--accent); }
+        .btn-primary { background: var(--accent); color: white; border-color: var(--accent); }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.5rem;
+        }
+        .card-title { font-weight: 600; margin-bottom: 1rem; display: flex; align-items: center; gap: 8px; }
+        .map-container {
+            position: relative;
+            background: linear-gradient(135deg, #e0f2fe, #dbeafe);
+            border-radius: 12px;
+            height: 400px;
+            overflow: hidden;
+        }
+        #canvas { width: 100%; height: 100%; }
+        .storm-select {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .storm-btn {
+            padding: 6px 12px;
+            border: none;
+            background: rgba(255,255,255,0.9);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        .storm-btn.active { background: var(--accent); color: white; }
+        .info-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .info-box { text-align: center; padding: 1rem; background: var(--bg); border-radius: 8px; }
+        .info-value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+        .info-label { font-size: 0.75rem; color: var(--text-muted); }
+        .chart-container { height: 250px; }
+        .weather-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-top: 1rem; }
+        .weather-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .weather-icon { font-size: 2rem; }
+        .weather-temp { font-size: 1.5rem; font-weight: 600; }
+        .weather-city { font-size: 0.9rem; color: var(--text-muted); }
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        footer a { color: var(--accent); }
+        .timeline { margin-top: 1rem; }
+        .timeline input { width: 100%; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <span class="logo-icon">🌀</span>
+            WeatherNext <span style="font-size:0.7rem;background:#e2e8f0;padding:2px 8px;border-radius:4px;margin-left:8px">LIGHT</span>
+        </div>
+        <div>
+            <a href="index.html" class="btn">Full Version</a>
+            <a href="https://github.com/hwkim3330/WeatherNext" class="btn btn-primary" target="_blank">GitHub</a>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">🗺️ Hurricane Track Map</div>
+                <div class="map-container">
+                    <canvas id="canvas"></canvas>
+                    <div class="storm-select" id="stormSelect"></div>
+                </div>
+                <div class="timeline">
+                    <input type="range" id="timeline" min="0" max="100" value="100">
+                </div>
+            </div>
+
+            <div>
+                <div class="card" style="margin-bottom: 1rem;">
+                    <div class="card-title">🌀 <span id="stormName">Hurricane Beryl</span></div>
+                    <div class="info-grid">
+                        <div class="info-box"><div class="info-value" id="wind">150</div><div class="info-label">Wind (kt)</div></div>
+                        <div class="info-box"><div class="info-value" id="pressure">934</div><div class="info-label">Pressure (mb)</div></div>
+                        <div class="info-box"><div class="info-value" id="lat">11.9°N</div><div class="info-label">Latitude</div></div>
+                        <div class="info-box"><div class="info-value" id="lon">62.7°W</div><div class="info-label">Longitude</div></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title">📊 Track Error Comparison</div>
+                    <div class="chart-container"><canvas id="chart"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-title">🌤️ Live Weather</div>
+            <div class="weather-grid" id="weather"></div>
+        </div>
+    </div>
+
+    <footer>
+        <a href="https://deepmind.google/science/weathernext/" target="_blank">DeepMind WeatherNext</a> |
+        <a href="https://open-meteo.com/" target="_blank">Open-Meteo API</a>
+    </footer>
+
+    <script>
+    // Storm Data
+    const STORMS = [
+        {
+            name: 'Hurricane Beryl',
+            track: [
+                {lon:-45.4,lat:9.4,wind:45,pressure:1003},{lon:-48.2,lat:10.1,wind:60,pressure:996},
+                {lon:-51.1,lat:10.6,wind:85,pressure:980},{lon:-54.0,lat:10.9,wind:115,pressure:959},
+                {lon:-57.0,lat:11.1,wind:130,pressure:946},{lon:-59.9,lat:11.3,wind:140,pressure:938},
+                {lon:-62.7,lat:11.9,wind:150,pressure:934},{lon:-65.6,lat:12.6,wind:145,pressure:938},
+                {lon:-68.6,lat:13.5,wind:130,pressure:950},{lon:-71.6,lat:14.3,wind:120,pressure:960},
+                {lon:-74.6,lat:15.2,wind:100,pressure:972},{lon:-77.5,lat:16.0,wind:85,pressure:980},
+                {lon:-80.2,lat:16.8,wind:90,pressure:978},{lon:-82.8,lat:17.5,wind:95,pressure:974},
+                {lon:-85.1,lat:18.1,wind:110,pressure:965},{lon:-87.3,lat:18.7,wind:95,pressure:973},
+                {lon:-89.5,lat:19.4,wind:80,pressure:982},{lon:-91.8,lat:20.2,wind:70,pressure:988},
+                {lon:-94.2,lat:21.4,wind:75,pressure:985},{lon:-96.4,lat:23.1,wind:80,pressure:980}
+            ]
+        },
+        {
+            name: 'Hurricane Otis',
+            track: [
+                {lon:-96.3,lat:11.4,wind:35,pressure:1004},{lon:-96.8,lat:12.4,wind:45,pressure:1000},
+                {lon:-97.3,lat:13.5,wind:65,pressure:991},{lon:-97.8,lat:14.6,wind:100,pressure:968},
+                {lon:-98.2,lat:15.5,wind:140,pressure:937},{lon:-99.0,lat:16.5,wind:165,pressure:923},
+                {lon:-99.5,lat:17.2,wind:135,pressure:945}
+            ]
+        },
+        {
+            name: 'Hurricane Lee',
+            track: [
+                {lon:-35.0,lat:11.5,wind:40,pressure:1005},{lon:-38.5,lat:12.0,wind:70,pressure:988},
+                {lon:-42.0,lat:13.0,wind:105,pressure:963},{lon:-46.0,lat:14.5,wind:145,pressure:935},
+                {lon:-50.5,lat:16.0,wind:160,pressure:926},{lon:-55.0,lat:17.5,wind:140,pressure:940},
+                {lon:-59.0,lat:19.0,wind:130,pressure:948},{lon:-62.5,lat:21.0,wind:115,pressure:958},
+                {lon:-65.5,lat:24.0,wind:100,pressure:968},{lon:-67.5,lat:30.0,wind:85,pressure:975},
+                {lon:-68.0,lat:37.0,wind:75,pressure:982},{lon:-67.0,lat:44.0,wind:65,pressure:988}
+            ]
+        }
+    ];
+
+    let currentStorm = 0;
+    let currentStep = 100;
+
+    // Canvas setup
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+
+    function resize() {
+        const rect = canvas.parentElement.getBoundingClientRect();
+        canvas.width = rect.width;
+        canvas.height = rect.height;
+        draw();
+    }
+    window.addEventListener('resize', resize);
+
+    function lonToX(lon) { return ((lon + 180) / 360) * canvas.width; }
+    function latToY(lat) { return ((90 - lat) / 180) * canvas.height; }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Simple world outline
+        ctx.strokeStyle = '#94a3b8';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        // Americas outline
+        ctx.moveTo(lonToX(-130), latToY(50));
+        ctx.lineTo(lonToX(-70), latToY(50));
+        ctx.lineTo(lonToX(-60), latToY(10));
+        ctx.lineTo(lonToX(-80), latToY(-5));
+        ctx.lineTo(lonToX(-70), latToY(-55));
+        ctx.stroke();
+
+        const storm = STORMS[currentStorm];
+        const maxIdx = Math.floor(currentStep / 100 * (storm.track.length - 1));
+        const track = storm.track.slice(0, maxIdx + 1);
+
+        if (track.length < 2) return;
+
+        // Draw track
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(lonToX(track[0].lon), latToY(track[0].lat));
+        track.forEach(p => ctx.lineTo(lonToX(p.lon), latToY(p.lat)));
+        ctx.stroke();
+
+        // Draw points
+        track.forEach((p, i) => {
+            ctx.beginPath();
+            ctx.arc(lonToX(p.lon), latToY(p.lat), i === track.length - 1 ? 8 : 4, 0, Math.PI * 2);
+            ctx.fillStyle = i === track.length - 1 ? '#ef4444' : '#fca5a5';
+            ctx.fill();
+        });
+
+        // Update info
+        const pt = track[track.length - 1];
+        document.getElementById('wind').textContent = pt.wind;
+        document.getElementById('pressure').textContent = pt.pressure;
+        document.getElementById('lat').textContent = pt.lat.toFixed(1) + '°N';
+        document.getElementById('lon').textContent = Math.abs(pt.lon).toFixed(1) + '°W';
+    }
+
+    // Storm buttons
+    const select = document.getElementById('stormSelect');
+    STORMS.forEach((s, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'storm-btn' + (i === 0 ? ' active' : '');
+        btn.textContent = s.name.split(' ')[1];
+        btn.onclick = () => {
+            currentStorm = i;
+            currentStep = 100;
+            document.getElementById('timeline').value = 100;
+            document.querySelectorAll('.storm-btn').forEach((b, j) => b.classList.toggle('active', i === j));
+            document.getElementById('stormName').textContent = s.name;
+            draw();
+            updateChart();
+        };
+        select.appendChild(btn);
+    });
+
+    // Timeline
+    document.getElementById('timeline').oninput = function() {
+        currentStep = parseInt(this.value);
+        draw();
+    };
+
+    // Chart
+    const chart = new Chart(document.getElementById('chart'), {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                { label: 'AI', data: [], borderColor: '#3b82f6', tension: 0.4 },
+                { label: 'ECMWF', data: [], borderColor: '#22c55e', tension: 0.4 },
+                { label: 'GFS', data: [], borderColor: '#eab308', tension: 0.4 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { position: 'top' } },
+            scales: {
+                y: { title: { display: true, text: 'Error (km)' } }
+            }
+        }
+    });
+
+    function updateChart() {
+        const storm = STORMS[currentStorm];
+        const labels = storm.track.map((_, i) => i * 12 + 'h');
+        const aiErr = storm.track.map((_, i) => Math.round(20 + i * 8 + Math.random() * 10));
+        const ecErr = storm.track.map((_, i) => Math.round(30 + i * 12 + Math.random() * 15));
+        const gfsErr = storm.track.map((_, i) => Math.round(40 + i * 15 + Math.random() * 20));
+
+        chart.data.labels = labels;
+        chart.data.datasets[0].data = aiErr;
+        chart.data.datasets[1].data = ecErr;
+        chart.data.datasets[2].data = gfsErr;
+        chart.update();
+    }
+
+    // Weather
+    async function loadWeather() {
+        const cities = [
+            {name:'Miami',lat:25.76,lon:-80.19},{name:'Tokyo',lat:35.68,lon:139.65},
+            {name:'Seoul',lat:37.57,lon:126.98},{name:'Sydney',lat:-33.87,lon:151.21}
+        ];
+        const grid = document.getElementById('weather');
+        for (const city of cities) {
+            try {
+                const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}&current=temperature_2m,weather_code`);
+                const data = await res.json();
+                const icon = data.current.weather_code === 0 ? '☀️' : data.current.weather_code <= 3 ? '⛅' : '🌧️';
+                grid.innerHTML += `
+                    <div class="weather-card">
+                        <div class="weather-icon">${icon}</div>
+                        <div class="weather-temp">${Math.round(data.current.temperature_2m)}°C</div>
+                        <div class="weather-city">${city.name}</div>
+                    </div>
+                `;
+            } catch(e) {}
+        }
+    }
+
+    // Init
+    resize();
+    updateChart();
+    loadWeather();
+    </script>
+</body>
+</html>
