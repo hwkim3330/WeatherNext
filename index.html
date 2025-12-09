@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather Lab - AI Cyclone Prediction Visualization</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌀</text></svg>">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --secondary: #34a853;
+            --warning: #fbbc04;
+            --danger: #ea4335;
+            --dark: #202124;
+            --gray: #5f6368;
+            --light: #f8f9fa;
+            --card-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        body {
+            font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 50%, #415a77 100%);
+            min-height: 100vh;
+            color: #fff;
+            overflow-x: hidden;
+        }
+
+        /* Header */
+        header {
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 500;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        nav {
+            display: flex;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        nav a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: color 0.3s;
+        }
+
+        nav a:hover {
+            color: #fff;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border-radius: 24px;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(26, 115, 232, 0.4);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 2rem 60px;
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 400;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #fff 0%, #a8dadc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: rgba(255,255,255,0.7);
+            line-height: 1.8;
+            margin-bottom: 2rem;
+        }
+
+        /* Globe Container */
+        .globe-section {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .visualization-container {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 20px;
+            padding: 1.5rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .controls-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .model-selector {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .model-btn {
+            padding: 8px 16px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 20px;
+            color: #fff;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85rem;
+        }
+
+        .model-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .model-btn:hover:not(.active) {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .time-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .play-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--primary);
+            border: none;
+            color: #fff;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s;
+        }
+
+        .play-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 20px rgba(26, 115, 232, 0.5);
+        }
+
+        .timeline {
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .timeline input[type="range"] {
+            width: 100%;
+            height: 6px;
+            -webkit-appearance: none;
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .timeline input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--primary);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+
+        .time-label {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.7);
+            min-width: 120px;
+            text-align: right;
+        }
+
+        /* Map Container */
+        .map-container {
+            position: relative;
+            width: 100%;
+            height: 500px;
+            background: #0d1b2a;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        #globe-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Cyclone Legend */
+        .legend {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(0,0,0,0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+        }
+
+        .legend h4 {
+            margin-bottom: 10px;
+            color: rgba(255,255,255,0.9);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 6px;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 4px;
+            border-radius: 2px;
+        }
+
+        /* Cyclone Info Panel */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            padding: 20px;
+            border-radius: 12px;
+            min-width: 280px;
+            backdrop-filter: blur(10px);
+        }
+
+        .cyclone-name {
+            font-size: 1.5rem;
+            font-weight: 500;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .cyclone-category {
+            display: inline-block;
+            padding: 4px 12px;
+            background: var(--danger);
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .info-item {
+            text-align: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 8px;
+        }
+
+        .info-value {
+            font-size: 1.5rem;
+            font-weight: 500;
+            color: var(--primary);
+        }
+
+        .info-label {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+            margin-top: 4px;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .features h2 {
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 400;
+            margin-bottom: 3rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.05);
+            border-radius: 16px;
+            padding: 2rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+            background: rgba(255,255,255,0.08);
+            border-color: var(--primary);
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            color: rgba(255,255,255,0.7);
+            line-height: 1.7;
+        }
+
+        /* Stats Section */
+        .stats {
+            padding: 60px 2rem;
+            background: rgba(0,0,0,0.3);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+            max-width: 1000px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .stat-item h3 {
+            font-size: 3rem;
+            font-weight: 300;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-item p {
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* Footer */
+        footer {
+            padding: 40px 2rem;
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .model-selector {
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+
+            .time-controls {
+                justify-content: center;
+            }
+
+            .info-panel {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-top: 1rem;
+            }
+
+            nav {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <div class="logo-icon">🌀</div>
+            <span>Weather Lab</span>
+        </div>
+        <nav>
+            <a href="#visualization">Visualization</a>
+            <a href="#features">Features</a>
+            <a href="https://deepmind.google/science/weathernext/" target="_blank">WeatherNext</a>
+            <a href="https://github.com/hwkim3330/WeatherNext" target="_blank">GitHub</a>
+        </nav>
+        <a href="#visualization" class="btn btn-primary">Try Demo</a>
+    </header>
+
+    <section class="hero">
+        <h1>AI-Powered Cyclone Prediction</h1>
+        <p>Explore experimental AI weather models that predict tropical cyclone formation, track, intensity, and size up to 15 days ahead. Compare predictions from multiple AI and physics-based models in real-time.</p>
+        <a href="#visualization" class="btn btn-primary">
+            <span>🌊</span> Explore Cyclones
+        </a>
+    </section>
+
+    <section class="globe-section" id="visualization">
+        <div class="visualization-container">
+            <div class="controls-bar">
+                <div class="model-selector">
+                    <button class="model-btn active" data-model="ai">AI Ensemble</button>
+                    <button class="model-btn" data-model="ecmwf">ECMWF ENS</button>
+                    <button class="model-btn" data-model="gfs">GFS</button>
+                    <button class="model-btn" data-model="all">Compare All</button>
+                </div>
+                <div class="time-controls">
+                    <button class="play-btn" id="playBtn">▶</button>
+                    <div class="timeline">
+                        <input type="range" id="timeSlider" min="0" max="360" value="0">
+                    </div>
+                    <span class="time-label" id="timeLabel">Day 0, Hour 0</span>
+                </div>
+            </div>
+
+            <div class="map-container">
+                <canvas id="globe-canvas"></canvas>
+
+                <div class="legend">
+                    <h4>Cyclone Tracks</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #1a73e8;"></div>
+                        <span>AI Model (Ensemble Mean)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #34a853;"></div>
+                        <span>ECMWF ENS</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #fbbc04;"></div>
+                        <span>GFS Model</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ea4335;"></div>
+                        <span>Observed Track</span>
+                    </div>
+                </div>
+
+                <div class="info-panel" id="infoPanel">
+                    <div class="cyclone-name">
+                        <span id="cycloneName">Hurricane Beryl</span>
+                        <span class="cyclone-category" id="cycloneCategory">CAT 5</span>
+                    </div>
+                    <div id="cycloneDate" style="color: rgba(255,255,255,0.6); font-size: 0.9rem;">June 28 - July 11, 2024</div>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <div class="info-value" id="windSpeed">165</div>
+                            <div class="info-label">Max Wind (mph)</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value" id="pressure">934</div>
+                            <div class="info-label">Min Pressure (mb)</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value" id="trackError">140</div>
+                            <div class="info-label">Track Error (km)</div>
+                        </div>
+                        <div class="info-item">
+                            <div class="info-value" id="forecast">15</div>
+                            <div class="info-label">Forecast Days</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <h2>Model Capabilities</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">🎯</div>
+                <h3>Improved Accuracy</h3>
+                <p>5-day cyclone track prediction is, on average, 140 km closer to the true location than physics-based models - comparable to 1.5-day improvement.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <h3>50 Scenarios</h3>
+                <p>Generate 50 possible cyclone scenarios simultaneously, capturing uncertainty and providing probabilistic forecasts for better decision-making.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🌍</div>
+                <h3>Global Coverage</h3>
+                <p>Track and predict cyclones across all ocean basins with consistent accuracy, validated on 2+ years of historical data.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Complete Prediction</h3>
+                <p>Predict formation, track, intensity, size, and shape of tropical cyclones - all critical factors for emergency response.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🔄</div>
+                <h3>Real-time Updates</h3>
+                <p>Forecasts updated every 6 hours, 4 times daily, providing the latest predictions as conditions change.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🤝</div>
+                <h3>NHC Partnership</h3>
+                <p>First AI model to be incorporated into the U.S. National Hurricane Center's operational forecasting workflow.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="stats">
+        <div class="stats-grid">
+            <div class="stat-item">
+                <h3>140km</h3>
+                <p>Improved track accuracy</p>
+            </div>
+            <div class="stat-item">
+                <h3>15</h3>
+                <p>Days ahead forecast</p>
+            </div>
+            <div class="stat-item">
+                <h3>8x</h3>
+                <p>Faster than physics models</p>
+            </div>
+            <div class="stat-item">
+                <h3>50</h3>
+                <p>Ensemble scenarios</p>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p>Weather Lab Demo - Inspired by <a href="https://deepmind.google/science/weathernext/" target="_blank">Google DeepMind WeatherNext</a></p>
+        <p style="margin-top: 10px;">Created for educational purposes. View on <a href="https://github.com/hwkim3330/WeatherNext" target="_blank">GitHub</a></p>
+    </footer>
+
+    <script>
+        // Canvas setup
+        const canvas = document.getElementById('globe-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height;
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            width = container.clientWidth;
+            height = container.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+        }
+
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Cyclone data (simulated based on real hurricanes)
+        const cyclones = [
+            {
+                name: "Hurricane Beryl",
+                category: "CAT 5",
+                date: "June 28 - July 11, 2024",
+                maxWind: 165,
+                minPressure: 934,
+                // Track points: [lon, lat, hour]
+                observed: [
+                    [-45.2, 9.1, 0], [-48.5, 10.2, 24], [-52.1, 11.5, 48],
+                    [-56.8, 12.8, 72], [-61.2, 14.1, 96], [-66.5, 15.8, 120],
+                    [-72.1, 17.2, 144], [-78.5, 18.5, 168], [-84.2, 19.8, 192],
+                    [-88.5, 21.2, 216], [-92.1, 22.5, 240], [-95.8, 24.1, 264]
+                ],
+                aiPrediction: [
+                    [-45.2, 9.1, 0], [-48.8, 10.5, 24], [-52.5, 11.8, 48],
+                    [-57.2, 13.1, 72], [-61.8, 14.5, 96], [-67.1, 16.2, 120],
+                    [-72.8, 17.8, 144], [-79.2, 19.1, 168], [-84.8, 20.2, 192],
+                    [-89.1, 21.8, 216], [-92.8, 23.1, 240], [-96.2, 24.5, 264]
+                ],
+                ecmwf: [
+                    [-45.2, 9.1, 0], [-47.8, 10.8, 24], [-51.2, 12.2, 48],
+                    [-55.5, 13.5, 72], [-59.8, 15.2, 96], [-64.5, 17.1, 120],
+                    [-70.2, 18.5, 144], [-76.8, 20.2, 168], [-82.5, 21.5, 192],
+                    [-87.2, 23.1, 216], [-91.5, 24.8, 240], [-95.1, 26.2, 264]
+                ],
+                gfs: [
+                    [-45.2, 9.1, 0], [-49.2, 9.8, 24], [-53.5, 10.8, 48],
+                    [-58.2, 12.2, 72], [-63.5, 13.5, 96], [-68.8, 15.2, 120],
+                    [-74.5, 16.8, 144], [-80.2, 18.1, 168], [-85.8, 19.5, 192],
+                    [-90.5, 20.8, 216], [-94.2, 22.1, 240], [-97.5, 23.5, 264]
+                ]
+            },
+            {
+                name: "Hurricane Otis",
+                category: "CAT 5",
+                date: "Oct 22 - 25, 2023",
+                maxWind: 165,
+                minPressure: 923,
+                observed: [
+                    [-96.5, 11.2, 0], [-97.2, 12.5, 24], [-98.1, 14.2, 48],
+                    [-99.2, 16.1, 72], [-99.8, 17.2, 96]
+                ],
+                aiPrediction: [
+                    [-96.5, 11.2, 0], [-97.5, 12.8, 24], [-98.5, 14.5, 48],
+                    [-99.5, 16.5, 72], [-100.2, 17.8, 96]
+                ],
+                ecmwf: [
+                    [-96.5, 11.2, 0], [-96.8, 13.1, 24], [-97.2, 15.2, 48],
+                    [-97.8, 17.5, 72], [-98.5, 19.2, 96]
+                ],
+                gfs: [
+                    [-96.5, 11.2, 0], [-97.8, 12.2, 24], [-99.2, 13.5, 48],
+                    [-100.5, 15.2, 72], [-101.8, 16.8, 96]
+                ]
+            }
+        ];
+
+        let currentCyclone = 0;
+        let currentTime = 0;
+        let isPlaying = false;
+        let activeModel = 'ai';
+
+        // Map projection (simple Mercator)
+        function lonLatToXY(lon, lat) {
+            const x = (lon + 180) * (width / 360);
+            const y = (90 - lat) * (height / 180);
+            return [x, y];
+        }
+
+        // Draw world map (simplified)
+        function drawMap() {
+            ctx.fillStyle = '#0d1b2a';
+            ctx.fillRect(0, 0, width, height);
+
+            // Draw grid
+            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            ctx.lineWidth = 1;
+
+            // Latitude lines
+            for (let lat = -60; lat <= 60; lat += 30) {
+                ctx.beginPath();
+                const [x1, y1] = lonLatToXY(-180, lat);
+                const [x2, y2] = lonLatToXY(180, lat);
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+
+            // Longitude lines
+            for (let lon = -180; lon <= 180; lon += 30) {
+                ctx.beginPath();
+                const [x1, y1] = lonLatToXY(lon, -90);
+                const [x2, y2] = lonLatToXY(lon, 90);
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+
+            // Draw simplified continents
+            drawContinents();
+        }
+
+        function drawContinents() {
+            ctx.fillStyle = 'rgba(100, 120, 100, 0.3)';
+            ctx.strokeStyle = 'rgba(150, 170, 150, 0.5)';
+            ctx.lineWidth = 1;
+
+            // North America (simplified)
+            ctx.beginPath();
+            const naPoints = [
+                [-170, 65], [-140, 70], [-100, 75], [-80, 70], [-60, 50],
+                [-65, 45], [-75, 35], [-80, 25], [-85, 30], [-95, 25],
+                [-100, 20], [-105, 20], [-115, 25], [-120, 35], [-125, 45],
+                [-130, 55], [-150, 60], [-170, 65]
+            ];
+            naPoints.forEach((p, i) => {
+                const [x, y] = lonLatToXY(p[0], p[1]);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // South America (simplified)
+            ctx.beginPath();
+            const saPoints = [
+                [-80, 10], [-60, 5], [-35, -5], [-35, -20], [-40, -25],
+                [-55, -25], [-65, -40], [-70, -55], [-75, -45], [-80, -20],
+                [-80, 10]
+            ];
+            saPoints.forEach((p, i) => {
+                const [x, y] = lonLatToXY(p[0], p[1]);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Africa (simplified)
+            ctx.beginPath();
+            const afPoints = [
+                [-15, 35], [10, 37], [35, 30], [40, 15], [50, 10],
+                [40, -5], [35, -35], [20, -35], [15, -25], [10, -5],
+                [-5, 5], [-15, 15], [-20, 25], [-15, 35]
+            ];
+            afPoints.forEach((p, i) => {
+                const [x, y] = lonLatToXY(p[0], p[1]);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Europe/Asia (simplified)
+            ctx.beginPath();
+            const euPoints = [
+                [-10, 35], [0, 45], [10, 50], [30, 45], [60, 55],
+                [90, 50], [120, 55], [140, 50], [145, 45], [130, 35],
+                [120, 25], [100, 20], [80, 25], [70, 20], [60, 25],
+                [50, 30], [35, 30], [10, 37], [-10, 35]
+            ];
+            euPoints.forEach((p, i) => {
+                const [x, y] = lonLatToXY(p[0], p[1]);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+
+            // Australia (simplified)
+            ctx.beginPath();
+            const auPoints = [
+                [115, -20], [130, -12], [145, -15], [150, -25], [150, -35],
+                [145, -40], [135, -35], [120, -35], [115, -25], [115, -20]
+            ];
+            auPoints.forEach((p, i) => {
+                const [x, y] = lonLatToXY(p[0], p[1]);
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+
+        // Draw cyclone track
+        function drawTrack(points, color, maxHour, dashPattern = []) {
+            if (points.length < 2) return;
+
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 3;
+            ctx.setLineDash(dashPattern);
+
+            ctx.beginPath();
+            let started = false;
+
+            for (let i = 0; i < points.length; i++) {
+                if (points[i][2] > maxHour) break;
+                const [x, y] = lonLatToXY(points[i][0], points[i][1]);
+                if (!started) {
+                    ctx.moveTo(x, y);
+                    started = true;
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            }
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw current position marker
+            for (let i = points.length - 1; i >= 0; i--) {
+                if (points[i][2] <= maxHour) {
+                    const [x, y] = lonLatToXY(points[i][0], points[i][1]);
+
+                    // Cyclone symbol
+                    ctx.beginPath();
+                    ctx.arc(x, y, 12, 0, Math.PI * 2);
+                    ctx.fillStyle = color;
+                    ctx.fill();
+
+                    // Spiral effect
+                    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    for (let angle = 0; angle < Math.PI * 4; angle += 0.1) {
+                        const r = 3 + angle * 1.5;
+                        const px = x + Math.cos(angle + currentTime * 0.01) * r;
+                        const py = y + Math.sin(angle + currentTime * 0.01) * r;
+                        if (angle === 0) ctx.moveTo(px, py);
+                        else ctx.lineTo(px, py);
+                    }
+                    ctx.stroke();
+                    break;
+                }
+            }
+        }
+
+        // Main render function
+        function render() {
+            drawMap();
+
+            const cyclone = cyclones[currentCyclone];
+            const maxHour = currentTime;
+
+            // Draw tracks based on active model
+            if (activeModel === 'all' || activeModel === 'ai') {
+                drawTrack(cyclone.aiPrediction, '#1a73e8', maxHour);
+            }
+            if (activeModel === 'all' || activeModel === 'ecmwf') {
+                drawTrack(cyclone.ecmwf, '#34a853', maxHour, [5, 5]);
+            }
+            if (activeModel === 'all' || activeModel === 'gfs') {
+                drawTrack(cyclone.gfs, '#fbbc04', maxHour, [10, 5]);
+            }
+
+            // Always show observed track
+            drawTrack(cyclone.observed, '#ea4335', maxHour);
+
+            // Update info panel
+            document.getElementById('cycloneName').textContent = cyclone.name;
+            document.getElementById('cycloneCategory').textContent = cyclone.category;
+            document.getElementById('cycloneDate').textContent = cyclone.date;
+            document.getElementById('windSpeed').textContent = cyclone.maxWind;
+            document.getElementById('pressure').textContent = cyclone.minPressure;
+        }
+
+        // Animation loop
+        function animate() {
+            if (isPlaying) {
+                currentTime += 6;
+                if (currentTime > 360) {
+                    currentTime = 0;
+                    currentCyclone = (currentCyclone + 1) % cyclones.length;
+                }
+                document.getElementById('timeSlider').value = currentTime;
+                updateTimeLabel();
+            }
+            render();
+            requestAnimationFrame(animate);
+        }
+
+        function updateTimeLabel() {
+            const days = Math.floor(currentTime / 24);
+            const hours = currentTime % 24;
+            document.getElementById('timeLabel').textContent = `Day ${days}, Hour ${hours}`;
+        }
+
+        // Event listeners
+        document.getElementById('playBtn').addEventListener('click', () => {
+            isPlaying = !isPlaying;
+            document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶';
+        });
+
+        document.getElementById('timeSlider').addEventListener('input', (e) => {
+            currentTime = parseInt(e.target.value);
+            updateTimeLabel();
+        });
+
+        document.querySelectorAll('.model-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                activeModel = btn.dataset.model;
+            });
+        });
+
+        // Start animation
+        animate();
+
+        // Cyclone selector (click on canvas to switch)
+        canvas.addEventListener('click', () => {
+            currentCyclone = (currentCyclone + 1) % cyclones.length;
+            currentTime = 0;
+            document.getElementById('timeSlider').value = 0;
+            updateTimeLabel();
+        });
+    </script>
+</body>
+</html>
