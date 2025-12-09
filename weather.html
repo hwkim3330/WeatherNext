@@ -594,11 +594,11 @@
             setProgress('3D 지구본 렌더링...', 60);
             initGlobe();
 
-            setProgress('날씨 데이터 수집 중...', 75);
-            await fetchAllWeather();
-
-            setProgress('차트 초기화...', 90);
+            setProgress('차트 초기화...', 70);
             initChart();
+
+            setProgress('날씨 데이터 수집 중...', 80);
+            await fetchAllWeather();
 
             setProgress('완료!', 100);
             setTimeout(() => document.getElementById('loading').classList.add('hidden'), 500);
