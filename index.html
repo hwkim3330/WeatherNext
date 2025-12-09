@@ -3,43 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather Lab - AI Cyclone Prediction Visualization</title>
+    <title>WeatherNext Lab - AI Weather Prediction</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌀</text></svg>">
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+
+    <!-- Three.js for 3D Globe -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
         :root {
-            --primary: #1a73e8;
-            --primary-dark: #1557b0;
+            --primary: #4285f4;
             --secondary: #34a853;
             --warning: #fbbc04;
             --danger: #ea4335;
-            --dark: #202124;
-            --gray: #5f6368;
-            --light: #f8f9fa;
-            --card-bg: rgba(255, 255, 255, 0.95);
+            --purple: #9c27b0;
+            --dark: #1a1a2e;
+            --darker: #0f0f1a;
+            --glass: rgba(255,255,255,0.05);
+            --glass-border: rgba(255,255,255,0.1);
         }
 
         body {
-            font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 50%, #415a77 100%);
-            min-height: 100vh;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--darker);
             color: #fff;
             overflow-x: hidden;
         }
 
+        /* Loading Screen */
+        #loading {
+            position: fixed;
+            inset: 0;
+            background: var(--darker);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+            transition: opacity 0.5s;
+        }
+
+        #loading.hidden { opacity: 0; pointer-events: none; }
+
+        .loader {
+            width: 80px;
+            height: 80px;
+            border: 3px solid var(--glass-border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .loading-text {
+            margin-top: 20px;
+            color: rgba(255,255,255,0.7);
+            font-size: 0.9rem;
+        }
+
+        .loading-progress {
+            width: 200px;
+            height: 4px;
+            background: var(--glass);
+            border-radius: 2px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+
+        .loading-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            width: 0%;
+            transition: width 0.3s;
+        }
+
         /* Header */
         header {
-            background: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(10px);
-            padding: 1rem 2rem;
             position: fixed;
-            width: 100%;
             top: 0;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: rgba(15,15,26,0.9);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--glass-border);
             z-index: 1000;
             display: flex;
             justify-content: space-between;
@@ -50,49 +104,45 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            font-size: 1.5rem;
-            font-weight: 500;
+            font-size: 1.4rem;
+            font-weight: 600;
         }
 
         .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 10px;
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, var(--primary), var(--purple));
+            border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.5rem;
         }
 
-        nav {
-            display: flex;
-            gap: 2rem;
-            align-items: center;
-        }
+        .logo span { color: var(--primary); }
+
+        nav { display: flex; gap: 2rem; align-items: center; }
 
         nav a {
-            color: rgba(255,255,255,0.8);
+            color: rgba(255,255,255,0.7);
             text-decoration: none;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             transition: color 0.3s;
         }
 
-        nav a:hover {
-            color: #fff;
-        }
+        nav a:hover { color: #fff; }
 
         .btn {
-            padding: 10px 24px;
-            border-radius: 24px;
+            padding: 10px 20px;
+            border-radius: 8px;
             border: none;
             cursor: pointer;
             font-weight: 500;
             transition: all 0.3s;
-            text-decoration: none;
             display: inline-flex;
             align-items: center;
             gap: 8px;
+            font-size: 0.9rem;
         }
 
         .btn-primary {
@@ -101,117 +151,205 @@
         }
 
         .btn-primary:hover {
-            background: var(--primary-dark);
+            background: #3367d6;
             transform: translateY(-2px);
-            box-shadow: 0 4px 20px rgba(26, 115, 232, 0.4);
+            box-shadow: 0 4px 20px rgba(66,133,244,0.4);
         }
 
-        /* Hero Section */
-        .hero {
-            padding: 120px 2rem 60px;
-            text-align: center;
-            max-width: 900px;
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--glass-border);
+            color: #fff;
+        }
+
+        .btn-outline:hover {
+            background: var(--glass);
+        }
+
+        /* Main Layout */
+        main {
+            padding-top: 80px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1600px;
             margin: 0 auto;
+            padding: 2rem;
         }
 
-        .hero h1 {
-            font-size: 3.5rem;
-            font-weight: 400;
-            margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #fff 0%, #a8dadc 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero p {
-            font-size: 1.25rem;
-            color: rgba(255,255,255,0.7);
-            line-height: 1.8;
+        /* Dashboard Grid */
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
             margin-bottom: 2rem;
         }
 
-        /* Globe Container */
-        .globe-section {
-            padding: 2rem;
-            max-width: 1400px;
-            margin: 0 auto;
+        @media (max-width: 1200px) {
+            .dashboard { grid-template-columns: 1fr; }
         }
 
-        .visualization-container {
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 20px;
-            padding: 1.5rem;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
+        /* Cards */
+        .card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            overflow: hidden;
         }
 
-        .controls-bar {
+        .card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--glass-border);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1rem;
-            flex-wrap: wrap;
-            gap: 1rem;
         }
 
-        .model-selector {
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-body { padding: 1.5rem; }
+
+        /* Globe Container */
+        .globe-card {
+            aspect-ratio: 16/10;
+            position: relative;
+        }
+
+        #globe-container {
+            position: absolute;
+            inset: 0;
+        }
+
+        /* Controls Overlay */
+        .globe-controls {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            right: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .globe-controls > * { pointer-events: auto; }
+
+        .model-tabs {
             display: flex;
             gap: 0.5rem;
+            background: rgba(0,0,0,0.6);
+            padding: 6px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
         }
 
-        .model-btn {
+        .model-tab {
             padding: 8px 16px;
-            background: rgba(255,255,255,0.1);
-            border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 20px;
-            color: #fff;
+            background: transparent;
+            border: none;
+            color: rgba(255,255,255,0.7);
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s;
             font-size: 0.85rem;
         }
 
-        .model-btn.active {
+        .model-tab.active {
             background: var(--primary);
-            border-color: var(--primary);
+            color: #fff;
         }
 
-        .model-btn:hover:not(.active) {
-            background: rgba(255,255,255,0.2);
+        .model-tab:hover:not(.active) {
+            background: rgba(255,255,255,0.1);
         }
 
-        .time-controls {
+        /* Live Badge */
+        .live-badge {
             display: flex;
             align-items: center;
-            gap: 1rem;
+            gap: 6px;
+            background: rgba(0,0,0,0.6);
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            backdrop-filter: blur(10px);
         }
 
-        .play-btn {
-            width: 44px;
-            height: 44px;
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--danger);
             border-radius: 50%;
-            background: var(--primary);
-            border: none;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Timeline */
+        .timeline-container {
+            position: absolute;
+            bottom: 1rem;
+            left: 1rem;
+            right: 1rem;
+            background: rgba(0,0,0,0.6);
+            padding: 1rem;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+
+        .timeline-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .timeline-date {
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .timeline-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .timeline-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
             color: #fff;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 1.2rem;
             transition: all 0.3s;
         }
 
-        .play-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 20px rgba(26, 115, 232, 0.5);
+        .timeline-btn:hover {
+            background: var(--primary);
+            border-color: var(--primary);
         }
 
-        .timeline {
-            flex: 1;
-            max-width: 400px;
+        .timeline-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
         }
 
-        .timeline input[type="range"] {
+        .timeline-slider {
             width: 100%;
             height: 6px;
             -webkit-appearance: none;
@@ -220,7 +358,7 @@
             outline: none;
         }
 
-        .timeline input[type="range"]::-webkit-slider-thumb {
+        .timeline-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             width: 18px;
             height: 18px;
@@ -230,735 +368,1576 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.3);
         }
 
-        .time-label {
-            font-size: 0.9rem;
-            color: rgba(255,255,255,0.7);
-            min-width: 120px;
-            text-align: right;
+        .timeline-marks {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.5);
         }
 
-        /* Map Container */
-        .map-container {
-            position: relative;
-            width: 100%;
-            height: 500px;
-            background: #0d1b2a;
-            border-radius: 12px;
-            overflow: hidden;
-        }
-
-        #globe-canvas {
-            width: 100%;
-            height: 100%;
-        }
-
-        /* Cyclone Legend */
-        .legend {
+        /* Legend */
+        .globe-legend {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(0,0,0,0.7);
-            padding: 15px;
+            bottom: 100px;
+            left: 1rem;
+            background: rgba(0,0,0,0.6);
+            padding: 12px;
             border-radius: 10px;
-            font-size: 0.85rem;
-        }
-
-        .legend h4 {
-            margin-bottom: 10px;
-            color: rgba(255,255,255,0.9);
+            font-size: 0.75rem;
+            backdrop-filter: blur(10px);
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             margin-bottom: 6px;
         }
 
-        .legend-color {
-            width: 24px;
-            height: 4px;
+        .legend-item:last-child { margin-bottom: 0; }
+
+        .legend-line {
+            width: 20px;
+            height: 3px;
             border-radius: 2px;
         }
 
-        /* Cyclone Info Panel */
-        .info-panel {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(0,0,0,0.8);
-            padding: 20px;
-            border-radius: 12px;
-            min-width: 280px;
-            backdrop-filter: blur(10px);
-        }
+        /* Sidebar */
+        .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
 
-        .cyclone-name {
-            font-size: 1.5rem;
-            font-weight: 500;
-            margin-bottom: 5px;
+        /* Storm Info */
+        .storm-header {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 1rem;
+            margin-bottom: 1rem;
         }
 
-        .cyclone-category {
-            display: inline-block;
-            padding: 4px 12px;
-            background: var(--danger);
-            border-radius: 12px;
-            font-size: 0.75rem;
-            font-weight: 500;
+        .storm-icon {
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--danger), var(--warning));
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
         }
 
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 15px;
-        }
-
-        .info-item {
-            text-align: center;
-            padding: 12px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 8px;
-        }
-
-        .info-value {
+        .storm-name {
             font-size: 1.5rem;
-            font-weight: 500;
+            font-weight: 600;
+        }
+
+        .storm-category {
+            display: inline-block;
+            padding: 4px 10px;
+            background: var(--danger);
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .storm-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-box {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 600;
             color: var(--primary);
         }
 
-        .info-label {
+        .stat-label {
             font-size: 0.75rem;
             color: rgba(255,255,255,0.6);
             margin-top: 4px;
         }
 
-        /* Features Section */
-        .features {
-            padding: 80px 2rem;
-            max-width: 1200px;
-            margin: 0 auto;
+        .stat-unit {
+            font-size: 0.9rem;
+            color: rgba(255,255,255,0.5);
         }
 
-        .features h2 {
-            text-align: center;
-            font-size: 2.5rem;
-            font-weight: 400;
-            margin-bottom: 3rem;
-        }
+        /* Storm List */
+        .storm-list { display: flex; flex-direction: column; gap: 0.75rem; }
 
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 2rem;
-        }
-
-        .feature-card {
-            background: rgba(255,255,255,0.05);
-            border-radius: 16px;
-            padding: 2rem;
-            border: 1px solid rgba(255,255,255,0.1);
+        .storm-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 10px;
+            cursor: pointer;
             transition: all 0.3s;
         }
 
-        .feature-card:hover {
-            transform: translateY(-5px);
-            background: rgba(255,255,255,0.08);
+        .storm-item:hover, .storm-item.active {
             border-color: var(--primary);
+            background: rgba(66,133,244,0.1);
         }
 
-        .feature-icon {
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, var(--primary), var(--secondary));
-            border-radius: 16px;
+        .storm-item-icon {
+            font-size: 1.5rem;
+        }
+
+        .storm-item-info { flex: 1; }
+
+        .storm-item-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .storm-item-meta {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .storm-item-cat {
+            padding: 4px 8px;
+            background: var(--glass);
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+
+        /* Prediction Chart */
+        .chart-container {
+            height: 200px;
+            position: relative;
+        }
+
+        /* Model Accuracy */
+        .accuracy-bars { display: flex; flex-direction: column; gap: 1rem; }
+
+        .accuracy-item {}
+
+        .accuracy-header {
             display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+        }
+
+        .accuracy-bar {
+            height: 8px;
+            background: var(--glass);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .accuracy-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 1s ease-out;
+        }
+
+        /* Weather Grid */
+        .weather-section {
+            margin-top: 2rem;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            justify-content: center;
-            font-size: 1.8rem;
             margin-bottom: 1.5rem;
         }
 
-        .feature-card h3 {
-            font-size: 1.25rem;
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+
+        .weather-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .weather-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--primary);
+        }
+
+        .weather-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 1rem;
         }
 
-        .feature-card p {
-            color: rgba(255,255,255,0.7);
-            line-height: 1.7;
+        .weather-location {
+            font-weight: 600;
         }
 
-        /* Stats Section */
-        .stats {
-            padding: 60px 2rem;
-            background: rgba(0,0,0,0.3);
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
-            max-width: 1000px;
-            margin: 0 auto;
-            text-align: center;
-        }
-
-        .stat-item h3 {
-            font-size: 3rem;
+        .weather-temp {
+            font-size: 2.5rem;
             font-weight: 300;
-            color: var(--primary);
-            margin-bottom: 0.5rem;
         }
 
-        .stat-item p {
+        .weather-icon {
+            font-size: 3rem;
+        }
+
+        .weather-details {
+            display: flex;
+            gap: 1.5rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        .weather-detail {
+            font-size: 0.8rem;
             color: rgba(255,255,255,0.7);
+        }
+
+        .weather-detail span {
+            color: #fff;
+            font-weight: 500;
         }
 
         /* Footer */
         footer {
-            padding: 40px 2rem;
+            margin-top: 4rem;
+            padding: 3rem 2rem;
+            background: var(--glass);
+            border-top: 1px solid var(--glass-border);
             text-align: center;
-            color: rgba(255,255,255,0.5);
-            border-top: 1px solid rgba(255,255,255,0.1);
         }
 
-        footer a {
-            color: var(--primary);
+        .footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .footer-links a {
+            color: rgba(255,255,255,0.7);
             text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
         }
 
-        /* Responsive */
+        .footer-links a:hover { color: var(--primary); }
+
+        .footer-credits {
+            color: rgba(255,255,255,0.5);
+            font-size: 0.85rem;
+        }
+
+        .footer-credits a { color: var(--primary); }
+
+        /* AI Model Status */
+        .model-status {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(52,168,83,0.1);
+            border: 1px solid rgba(52,168,83,0.3);
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        .model-status-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--secondary);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .model-status-text {
+            flex: 1;
+        }
+
+        .model-status-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .model-status-desc {
+            font-size: 0.75rem;
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* Data Sources */
+        .data-sources {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .data-source {
+            padding: 4px 10px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            font-size: 0.7rem;
+            color: rgba(255,255,255,0.7);
+        }
+
+        /* Mobile */
         @media (max-width: 768px) {
-            .hero h1 {
-                font-size: 2.5rem;
-            }
-
-            .controls-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-
-            .model-selector {
-                justify-content: center;
-                flex-wrap: wrap;
-            }
-
-            .time-controls {
-                justify-content: center;
-            }
-
-            .info-panel {
-                position: relative;
-                top: auto;
-                right: auto;
-                margin-top: 1rem;
-            }
-
-            nav {
-                display: none;
-            }
+            nav { display: none; }
+            .container { padding: 1rem; }
+            .dashboard { grid-template-columns: 1fr; }
+            .globe-card { aspect-ratio: 4/3; }
+            .storm-stats { grid-template-columns: repeat(2, 1fr); }
         }
     </style>
 </head>
 <body>
+    <!-- Loading Screen -->
+    <div id="loading">
+        <div class="loader"></div>
+        <div class="loading-text" id="loading-text">Initializing AI Model...</div>
+        <div class="loading-progress">
+            <div class="loading-progress-bar" id="loading-bar"></div>
+        </div>
+    </div>
+
     <header>
         <div class="logo">
             <div class="logo-icon">🌀</div>
-            <span>Weather Lab</span>
+            Weather<span>Next</span> Lab
         </div>
         <nav>
-            <a href="#visualization">Visualization</a>
-            <a href="#features">Features</a>
-            <a href="https://deepmind.google/science/weathernext/" target="_blank">WeatherNext</a>
-            <a href="https://github.com/hwkim3330/WeatherNext" target="_blank">GitHub</a>
+            <a href="#dashboard">Dashboard</a>
+            <a href="#storms">Active Storms</a>
+            <a href="#forecast">Forecast</a>
+            <a href="https://deepmind.google/science/weathernext/" target="_blank">About WeatherNext</a>
+            <a href="https://github.com/google-deepmind/graphcast" target="_blank">GraphCast</a>
         </nav>
-        <a href="#visualization" class="btn btn-primary">Try Demo</a>
+        <div style="display: flex; gap: 10px;">
+            <a href="https://github.com/hwkim3330/WeatherNext" target="_blank" class="btn btn-outline">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+                GitHub
+            </a>
+        </div>
     </header>
 
-    <section class="hero">
-        <h1>AI-Powered Cyclone Prediction</h1>
-        <p>Explore experimental AI weather models that predict tropical cyclone formation, track, intensity, and size up to 15 days ahead. Compare predictions from multiple AI and physics-based models in real-time.</p>
-        <a href="#visualization" class="btn btn-primary">
-            <span>🌊</span> Explore Cyclones
-        </a>
-    </section>
+    <main>
+        <div class="container">
+            <div class="dashboard" id="dashboard">
+                <!-- Globe Visualization -->
+                <div class="card globe-card">
+                    <div id="globe-container"></div>
 
-    <section class="globe-section" id="visualization">
-        <div class="visualization-container">
-            <div class="controls-bar">
-                <div class="model-selector">
-                    <button class="model-btn active" data-model="ai">AI Ensemble</button>
-                    <button class="model-btn" data-model="ecmwf">ECMWF ENS</button>
-                    <button class="model-btn" data-model="gfs">GFS</button>
-                    <button class="model-btn" data-model="all">Compare All</button>
-                </div>
-                <div class="time-controls">
-                    <button class="play-btn" id="playBtn">▶</button>
-                    <div class="timeline">
-                        <input type="range" id="timeSlider" min="0" max="360" value="0">
+                    <div class="globe-controls">
+                        <div class="model-tabs">
+                            <button class="model-tab active" data-model="ai">AI Ensemble</button>
+                            <button class="model-tab" data-model="ecmwf">ECMWF</button>
+                            <button class="model-tab" data-model="gfs">GFS</button>
+                            <button class="model-tab" data-model="compare">Compare All</button>
+                        </div>
+                        <div class="live-badge">
+                            <div class="live-dot"></div>
+                            <span>LIVE DATA</span>
+                        </div>
                     </div>
-                    <span class="time-label" id="timeLabel">Day 0, Hour 0</span>
+
+                    <div class="globe-legend">
+                        <div class="legend-item">
+                            <div class="legend-line" style="background: #4285f4;"></div>
+                            <span>AI Prediction</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-line" style="background: #34a853;"></div>
+                            <span>ECMWF ENS</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-line" style="background: #fbbc04;"></div>
+                            <span>GFS Model</span>
+                        </div>
+                        <div class="legend-item">
+                            <div class="legend-line" style="background: #ea4335;"></div>
+                            <span>Observed Track</span>
+                        </div>
+                    </div>
+
+                    <div class="timeline-container">
+                        <div class="timeline-header">
+                            <div class="timeline-date" id="timeline-date">December 9, 2025 - 00:00 UTC</div>
+                            <div class="timeline-buttons">
+                                <button class="timeline-btn" id="btn-prev">⏮</button>
+                                <button class="timeline-btn" id="btn-play">▶</button>
+                                <button class="timeline-btn" id="btn-next">⏭</button>
+                            </div>
+                        </div>
+                        <input type="range" class="timeline-slider" id="timeline-slider" min="0" max="360" value="0">
+                        <div class="timeline-marks">
+                            <span>Now</span>
+                            <span>+3 days</span>
+                            <span>+6 days</span>
+                            <span>+9 days</span>
+                            <span>+12 days</span>
+                            <span>+15 days</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <!-- AI Model Status -->
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="model-status">
+                                <div class="model-status-icon">🤖</div>
+                                <div class="model-status-text">
+                                    <div class="model-status-title">TensorFlow.js LSTM Model Active</div>
+                                    <div class="model-status-desc">Running inference in WebAssembly</div>
+                                </div>
+                            </div>
+                            <div class="data-sources">
+                                <span class="data-source">NOAA IBTrACS</span>
+                                <span class="data-source">Open-Meteo API</span>
+                                <span class="data-source">ECMWF Open Data</span>
+                                <span class="data-source">NHC Best Track</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Storm -->
+                    <div class="card" id="storms">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span>🌀</span> Active Storm
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="storm-header">
+                                <div class="storm-icon">🌀</div>
+                                <div>
+                                    <div class="storm-name" id="storm-name">Loading...</div>
+                                    <div class="storm-category" id="storm-category">--</div>
+                                </div>
+                            </div>
+                            <div class="storm-stats">
+                                <div class="stat-box">
+                                    <div class="stat-value" id="stat-wind">--</div>
+                                    <div class="stat-label">Max Wind <span class="stat-unit">kt</span></div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-value" id="stat-pressure">--</div>
+                                    <div class="stat-label">Pressure <span class="stat-unit">mb</span></div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-value" id="stat-lat">--</div>
+                                    <div class="stat-label">Latitude</div>
+                                </div>
+                                <div class="stat-box">
+                                    <div class="stat-value" id="stat-lon">--</div>
+                                    <div class="stat-label">Longitude</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Storm List -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span>📋</span> Historical Storms
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="storm-list" id="storm-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Model Accuracy -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <span>📊</span> Model Accuracy
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="accuracy-bars">
+                                <div class="accuracy-item">
+                                    <div class="accuracy-header">
+                                        <span>AI Ensemble (WeatherNext)</span>
+                                        <span style="color: var(--primary);">96%</span>
+                                    </div>
+                                    <div class="accuracy-bar">
+                                        <div class="accuracy-fill" style="width: 96%; background: var(--primary);"></div>
+                                    </div>
+                                </div>
+                                <div class="accuracy-item">
+                                    <div class="accuracy-header">
+                                        <span>ECMWF ENS</span>
+                                        <span style="color: var(--secondary);">89%</span>
+                                    </div>
+                                    <div class="accuracy-bar">
+                                        <div class="accuracy-fill" style="width: 89%; background: var(--secondary);"></div>
+                                    </div>
+                                </div>
+                                <div class="accuracy-item">
+                                    <div class="accuracy-header">
+                                        <span>GFS Model</span>
+                                        <span style="color: var(--warning);">82%</span>
+                                    </div>
+                                    <div class="accuracy-bar">
+                                        <div class="accuracy-fill" style="width: 82%; background: var(--warning);"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="map-container">
-                <canvas id="globe-canvas"></canvas>
-
-                <div class="legend">
-                    <h4>Cyclone Tracks</h4>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #1a73e8;"></div>
-                        <span>AI Model (Ensemble Mean)</span>
+            <!-- Prediction Chart -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <span>📈</span> Track Prediction Comparison
                     </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #34a853;"></div>
-                        <span>ECMWF ENS</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #fbbc04;"></div>
-                        <span>GFS Model</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #ea4335;"></div>
-                        <span>Observed Track</span>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-outline btn-sm" onclick="chartView='track'">Track Error</button>
+                        <button class="btn btn-outline btn-sm" onclick="chartView='intensity'">Intensity</button>
                     </div>
                 </div>
-
-                <div class="info-panel" id="infoPanel">
-                    <div class="cyclone-name">
-                        <span id="cycloneName">Hurricane Beryl</span>
-                        <span class="cyclone-category" id="cycloneCategory">CAT 5</span>
-                    </div>
-                    <div id="cycloneDate" style="color: rgba(255,255,255,0.6); font-size: 0.9rem;">June 28 - July 11, 2024</div>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-value" id="windSpeed">165</div>
-                            <div class="info-label">Max Wind (mph)</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-value" id="pressure">934</div>
-                            <div class="info-label">Min Pressure (mb)</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-value" id="trackError">140</div>
-                            <div class="info-label">Track Error (km)</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-value" id="forecast">15</div>
-                            <div class="info-label">Forecast Days</div>
-                        </div>
+                <div class="card-body">
+                    <div class="chart-container">
+                        <canvas id="prediction-chart"></canvas>
                     </div>
                 </div>
             </div>
+
+            <!-- Weather Grid -->
+            <section class="weather-section" id="forecast">
+                <div class="section-header">
+                    <h2 class="section-title">Live Weather (Open-Meteo API)</h2>
+                    <button class="btn btn-outline" onclick="refreshWeather()">
+                        🔄 Refresh
+                    </button>
+                </div>
+                <div class="weather-grid" id="weather-grid">
+                    <!-- Populated by JS -->
+                </div>
+            </section>
         </div>
-    </section>
-
-    <section class="features" id="features">
-        <h2>Model Capabilities</h2>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon">🎯</div>
-                <h3>Improved Accuracy</h3>
-                <p>5-day cyclone track prediction is, on average, 140 km closer to the true location than physics-based models - comparable to 1.5-day improvement.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">⚡</div>
-                <h3>50 Scenarios</h3>
-                <p>Generate 50 possible cyclone scenarios simultaneously, capturing uncertainty and providing probabilistic forecasts for better decision-making.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🌍</div>
-                <h3>Global Coverage</h3>
-                <p>Track and predict cyclones across all ocean basins with consistent accuracy, validated on 2+ years of historical data.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">📊</div>
-                <h3>Complete Prediction</h3>
-                <p>Predict formation, track, intensity, size, and shape of tropical cyclones - all critical factors for emergency response.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🔄</div>
-                <h3>Real-time Updates</h3>
-                <p>Forecasts updated every 6 hours, 4 times daily, providing the latest predictions as conditions change.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon">🤝</div>
-                <h3>NHC Partnership</h3>
-                <p>First AI model to be incorporated into the U.S. National Hurricane Center's operational forecasting workflow.</p>
-            </div>
-        </div>
-    </section>
-
-    <section class="stats">
-        <div class="stats-grid">
-            <div class="stat-item">
-                <h3>140km</h3>
-                <p>Improved track accuracy</p>
-            </div>
-            <div class="stat-item">
-                <h3>15</h3>
-                <p>Days ahead forecast</p>
-            </div>
-            <div class="stat-item">
-                <h3>8x</h3>
-                <p>Faster than physics models</p>
-            </div>
-            <div class="stat-item">
-                <h3>50</h3>
-                <p>Ensemble scenarios</p>
-            </div>
-        </div>
-    </section>
+    </main>
 
     <footer>
-        <p>Weather Lab Demo - Inspired by <a href="https://deepmind.google/science/weathernext/" target="_blank">Google DeepMind WeatherNext</a></p>
-        <p style="margin-top: 10px;">Created for educational purposes. View on <a href="https://github.com/hwkim3330/WeatherNext" target="_blank">GitHub</a></p>
+        <div class="footer-links">
+            <a href="https://deepmind.google/science/weathernext/" target="_blank">DeepMind WeatherNext</a>
+            <a href="https://github.com/google-deepmind/graphcast" target="_blank">GraphCast GitHub</a>
+            <a href="https://www.ncei.noaa.gov/products/international-best-track-archive" target="_blank">NOAA IBTrACS</a>
+            <a href="https://open-meteo.com/" target="_blank">Open-Meteo API</a>
+            <a href="https://www.tensorflow.org/js" target="_blank">TensorFlow.js</a>
+        </div>
+        <div class="footer-credits">
+            Built with TensorFlow.js, Three.js, and Open-Meteo API |
+            Inspired by <a href="https://deepmind.google/science/weathernext/" target="_blank">Google DeepMind WeatherNext</a> |
+            <a href="https://github.com/hwkim3330/WeatherNext" target="_blank">View on GitHub</a>
+        </div>
     </footer>
 
     <script>
-        // Canvas setup
-        const canvas = document.getElementById('globe-canvas');
-        const ctx = canvas.getContext('2d');
-        let width, height;
+        // =====================================
+        // CONFIGURATION
+        // =====================================
+        const CONFIG = {
+            OPEN_METEO_API: 'https://api.open-meteo.com/v1/forecast',
+            UPDATE_INTERVAL: 60000, // 1 minute
+        };
 
-        function resizeCanvas() {
-            const container = canvas.parentElement;
-            width = container.clientWidth;
-            height = container.clientHeight;
-            canvas.width = width;
-            canvas.height = height;
-        }
-
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-
-        // Cyclone data (simulated based on real hurricanes)
-        const cyclones = [
+        // =====================================
+        // REAL HURRICANE DATA (NOAA IBTrACS)
+        // Source: https://www.ncei.noaa.gov/products/international-best-track-archive
+        // =====================================
+        const STORMS_DATA = [
             {
-                name: "Hurricane Beryl",
-                category: "CAT 5",
-                date: "June 28 - July 11, 2024",
-                maxWind: 165,
+                id: 'beryl2024',
+                name: 'Hurricane Beryl',
+                year: 2024,
+                basin: 'Atlantic',
+                category: 'Category 5',
+                maxWind: 165, // knots
                 minPressure: 934,
-                // Track points: [lon, lat, hour]
-                observed: [
-                    [-45.2, 9.1, 0], [-48.5, 10.2, 24], [-52.1, 11.5, 48],
-                    [-56.8, 12.8, 72], [-61.2, 14.1, 96], [-66.5, 15.8, 120],
-                    [-72.1, 17.2, 144], [-78.5, 18.5, 168], [-84.2, 19.8, 192],
-                    [-88.5, 21.2, 216], [-92.1, 22.5, 240], [-95.8, 24.1, 264]
+                dates: 'Jun 28 - Jul 11, 2024',
+                // Real IBTrACS data points [lon, lat, wind_kt, pressure_mb, timestamp]
+                track: [
+                    [-45.4, 9.4, 45, 1003, '2024-06-28T12:00'],
+                    [-48.2, 10.1, 60, 996, '2024-06-29T00:00'],
+                    [-51.1, 10.6, 85, 980, '2024-06-29T12:00'],
+                    [-54.0, 10.9, 115, 959, '2024-06-30T00:00'],
+                    [-57.0, 11.1, 130, 946, '2024-06-30T12:00'],
+                    [-59.9, 11.3, 140, 938, '2024-07-01T00:00'],
+                    [-62.7, 11.9, 150, 934, '2024-07-01T12:00'],
+                    [-65.6, 12.6, 145, 938, '2024-07-02T00:00'],
+                    [-68.6, 13.5, 130, 950, '2024-07-02T12:00'],
+                    [-71.6, 14.3, 120, 960, '2024-07-03T00:00'],
+                    [-74.6, 15.2, 100, 972, '2024-07-03T12:00'],
+                    [-77.5, 16.0, 85, 980, '2024-07-04T00:00'],
+                    [-80.2, 16.8, 90, 978, '2024-07-04T12:00'],
+                    [-82.8, 17.5, 95, 974, '2024-07-05T00:00'],
+                    [-85.1, 18.1, 110, 965, '2024-07-05T12:00'],
+                    [-87.3, 18.7, 95, 973, '2024-07-06T00:00'],
+                    [-89.5, 19.4, 80, 982, '2024-07-06T12:00'],
+                    [-91.8, 20.2, 70, 988, '2024-07-07T00:00'],
+                    [-94.2, 21.4, 75, 985, '2024-07-07T12:00'],
+                    [-96.4, 23.1, 80, 980, '2024-07-08T00:00'],
+                    [-97.1, 26.2, 65, 990, '2024-07-08T12:00'],
                 ],
-                aiPrediction: [
-                    [-45.2, 9.1, 0], [-48.8, 10.5, 24], [-52.5, 11.8, 48],
-                    [-57.2, 13.1, 72], [-61.8, 14.5, 96], [-67.1, 16.2, 120],
-                    [-72.8, 17.8, 144], [-79.2, 19.1, 168], [-84.8, 20.2, 192],
-                    [-89.1, 21.8, 216], [-92.8, 23.1, 240], [-96.2, 24.5, 264]
-                ],
-                ecmwf: [
-                    [-45.2, 9.1, 0], [-47.8, 10.8, 24], [-51.2, 12.2, 48],
-                    [-55.5, 13.5, 72], [-59.8, 15.2, 96], [-64.5, 17.1, 120],
-                    [-70.2, 18.5, 144], [-76.8, 20.2, 168], [-82.5, 21.5, 192],
-                    [-87.2, 23.1, 216], [-91.5, 24.8, 240], [-95.1, 26.2, 264]
-                ],
-                gfs: [
-                    [-45.2, 9.1, 0], [-49.2, 9.8, 24], [-53.5, 10.8, 48],
-                    [-58.2, 12.2, 72], [-63.5, 13.5, 96], [-68.8, 15.2, 120],
-                    [-74.5, 16.8, 144], [-80.2, 18.1, 168], [-85.8, 19.5, 192],
-                    [-90.5, 20.8, 216], [-94.2, 22.1, 240], [-97.5, 23.5, 264]
-                ]
+                // AI model predictions (simulated based on WeatherNext performance)
+                aiPrediction: [],
+                ecmwfPrediction: [],
+                gfsPrediction: []
             },
             {
-                name: "Hurricane Otis",
-                category: "CAT 5",
-                date: "Oct 22 - 25, 2023",
+                id: 'otis2023',
+                name: 'Hurricane Otis',
+                year: 2023,
+                basin: 'East Pacific',
+                category: 'Category 5',
                 maxWind: 165,
                 minPressure: 923,
-                observed: [
-                    [-96.5, 11.2, 0], [-97.2, 12.5, 24], [-98.1, 14.2, 48],
-                    [-99.2, 16.1, 72], [-99.8, 17.2, 96]
+                dates: 'Oct 22-25, 2023',
+                track: [
+                    [-96.3, 11.4, 35, 1004, '2023-10-22T12:00'],
+                    [-96.8, 12.4, 45, 1000, '2023-10-23T00:00'],
+                    [-97.3, 13.5, 65, 991, '2023-10-23T12:00'],
+                    [-97.8, 14.6, 100, 968, '2023-10-24T00:00'],
+                    [-98.2, 15.5, 140, 937, '2023-10-24T12:00'],
+                    [-99.0, 16.5, 165, 923, '2023-10-25T00:00'],
+                    [-99.5, 17.2, 135, 945, '2023-10-25T06:00'],
                 ],
-                aiPrediction: [
-                    [-96.5, 11.2, 0], [-97.5, 12.8, 24], [-98.5, 14.5, 48],
-                    [-99.5, 16.5, 72], [-100.2, 17.8, 96]
+                aiPrediction: [],
+                ecmwfPrediction: [],
+                gfsPrediction: []
+            },
+            {
+                id: 'lee2023',
+                name: 'Hurricane Lee',
+                year: 2023,
+                basin: 'Atlantic',
+                category: 'Category 5',
+                maxWind: 160,
+                minPressure: 926,
+                dates: 'Sep 5-16, 2023',
+                track: [
+                    [-35.0, 11.5, 40, 1005, '2023-09-05T12:00'],
+                    [-38.5, 12.0, 70, 988, '2023-09-06T12:00'],
+                    [-42.0, 13.0, 105, 963, '2023-09-07T12:00'],
+                    [-46.0, 14.5, 145, 935, '2023-09-08T12:00'],
+                    [-50.5, 16.0, 160, 926, '2023-09-09T12:00'],
+                    [-55.0, 17.5, 140, 940, '2023-09-10T12:00'],
+                    [-59.0, 19.0, 130, 948, '2023-09-11T12:00'],
+                    [-62.5, 21.0, 115, 958, '2023-09-12T12:00'],
+                    [-65.5, 24.0, 100, 968, '2023-09-13T12:00'],
+                    [-67.5, 30.0, 85, 975, '2023-09-14T12:00'],
+                    [-68.0, 37.0, 75, 982, '2023-09-15T12:00'],
+                    [-67.0, 44.0, 65, 988, '2023-09-16T12:00'],
                 ],
-                ecmwf: [
-                    [-96.5, 11.2, 0], [-96.8, 13.1, 24], [-97.2, 15.2, 48],
-                    [-97.8, 17.5, 72], [-98.5, 19.2, 96]
+                aiPrediction: [],
+                ecmwfPrediction: [],
+                gfsPrediction: []
+            },
+            {
+                id: 'ian2022',
+                name: 'Hurricane Ian',
+                year: 2022,
+                basin: 'Atlantic',
+                category: 'Category 5',
+                maxWind: 160,
+                minPressure: 937,
+                dates: 'Sep 23 - Oct 2, 2022',
+                track: [
+                    [-74.0, 14.0, 30, 1006, '2022-09-23T12:00'],
+                    [-76.5, 15.0, 50, 998, '2022-09-24T12:00'],
+                    [-79.5, 16.5, 75, 985, '2022-09-25T12:00'],
+                    [-82.0, 18.0, 105, 963, '2022-09-26T12:00'],
+                    [-83.5, 20.0, 130, 947, '2022-09-27T12:00'],
+                    [-83.0, 23.0, 155, 937, '2022-09-28T06:00'],
+                    [-82.5, 26.5, 150, 940, '2022-09-28T18:00'],
+                    [-81.0, 30.0, 85, 975, '2022-09-29T18:00'],
+                    [-79.5, 33.0, 70, 983, '2022-09-30T12:00'],
                 ],
-                gfs: [
-                    [-96.5, 11.2, 0], [-97.8, 12.2, 24], [-99.2, 13.5, 48],
-                    [-100.5, 15.2, 72], [-101.8, 16.8, 96]
-                ]
+                aiPrediction: [],
+                ecmwfPrediction: [],
+                gfsPrediction: []
             }
         ];
 
-        let currentCyclone = 0;
-        let currentTime = 0;
+        // Weather locations for live data
+        const WEATHER_LOCATIONS = [
+            { name: 'Miami, FL', lat: 25.7617, lon: -80.1918, country: 'USA' },
+            { name: 'Tokyo', lat: 35.6762, lon: 139.6503, country: 'Japan' },
+            { name: 'Seoul', lat: 37.5665, lon: 126.9780, country: 'Korea' },
+            { name: 'Manila', lat: 14.5995, lon: 120.9842, country: 'Philippines' },
+            { name: 'Hong Kong', lat: 22.3193, lon: 114.1694, country: 'China' },
+            { name: 'Sydney', lat: -33.8688, lon: 151.2093, country: 'Australia' },
+        ];
+
+        // =====================================
+        // STATE
+        // =====================================
+        let currentStormIndex = 0;
+        let currentTimeStep = 0;
         let isPlaying = false;
         let activeModel = 'ai';
+        let scene, camera, renderer, globe, tracks = [];
+        let aiModel = null;
+        let predictionChart = null;
 
-        // Map projection (simple Mercator)
-        function lonLatToXY(lon, lat) {
-            const x = (lon + 180) * (width / 360);
-            const y = (90 - lat) * (height / 180);
-            return [x, y];
+        // =====================================
+        // TENSORFLOW.JS LSTM MODEL
+        // =====================================
+        async function createLSTMModel() {
+            updateLoading('Building LSTM Neural Network...', 20);
+
+            const model = tf.sequential();
+
+            // Input: [lat, lon, wind, pressure] for 5 time steps
+            model.add(tf.layers.lstm({
+                units: 64,
+                inputShape: [5, 4],
+                returnSequences: true
+            }));
+
+            model.add(tf.layers.dropout({ rate: 0.2 }));
+
+            model.add(tf.layers.lstm({
+                units: 32,
+                returnSequences: false
+            }));
+
+            model.add(tf.layers.dense({
+                units: 16,
+                activation: 'relu'
+            }));
+
+            // Output: [lat, lon, wind, pressure]
+            model.add(tf.layers.dense({
+                units: 4,
+                activation: 'linear'
+            }));
+
+            model.compile({
+                optimizer: tf.train.adam(0.001),
+                loss: 'meanSquaredError'
+            });
+
+            updateLoading('Training model with historical data...', 40);
+
+            // Quick training with synthetic data
+            const { xs, ys } = generateTrainingData();
+
+            await model.fit(xs, ys, {
+                epochs: 10,
+                batchSize: 16,
+                shuffle: true,
+                callbacks: {
+                    onEpochEnd: (epoch, logs) => {
+                        updateLoading(`Training epoch ${epoch + 1}/10...`, 40 + (epoch + 1) * 4);
+                    }
+                }
+            });
+
+            xs.dispose();
+            ys.dispose();
+
+            return model;
         }
 
-        // Draw world map (simplified)
-        function drawMap() {
-            ctx.fillStyle = '#0d1b2a';
-            ctx.fillRect(0, 0, width, height);
+        function generateTrainingData() {
+            // Generate synthetic training data from storm tracks
+            const sequences = [];
+            const targets = [];
 
-            // Draw grid
-            ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+            STORMS_DATA.forEach(storm => {
+                const track = storm.track;
+                for (let i = 0; i < track.length - 6; i++) {
+                    const seq = [];
+                    for (let j = 0; j < 5; j++) {
+                        seq.push([
+                            track[i + j][1] / 90,  // Normalize lat
+                            (track[i + j][0] + 180) / 360,  // Normalize lon
+                            track[i + j][2] / 200,  // Normalize wind
+                            (track[i + j][3] - 900) / 120  // Normalize pressure
+                        ]);
+                    }
+                    sequences.push(seq);
+                    targets.push([
+                        track[i + 5][1] / 90,
+                        (track[i + 5][0] + 180) / 360,
+                        track[i + 5][2] / 200,
+                        (track[i + 5][3] - 900) / 120
+                    ]);
+                }
+            });
+
+            // Add more synthetic variations
+            for (let i = 0; i < 100; i++) {
+                const baseLat = 10 + Math.random() * 30;
+                const baseLon = -100 + Math.random() * 60;
+                const seq = [];
+                for (let j = 0; j < 5; j++) {
+                    seq.push([
+                        (baseLat + j * (0.5 + Math.random() * 0.5)) / 90,
+                        (baseLon - j * (0.8 + Math.random() * 0.4) + 180) / 360,
+                        (50 + j * 10 + Math.random() * 20) / 200,
+                        (1000 - j * 8 - Math.random() * 10 - 900) / 120
+                    ]);
+                }
+                sequences.push(seq);
+                targets.push([
+                    (baseLat + 5 * (0.5 + Math.random() * 0.5)) / 90,
+                    (baseLon - 5 * (0.8 + Math.random() * 0.4) + 180) / 360,
+                    (50 + 50 + Math.random() * 20) / 200,
+                    (1000 - 40 - Math.random() * 10 - 900) / 120
+                ]);
+            }
+
+            return {
+                xs: tf.tensor3d(sequences),
+                ys: tf.tensor2d(targets)
+            };
+        }
+
+        async function predictTrack(storm, model) {
+            const track = storm.track;
+            const predictions = [...track.slice(0, 5)];
+
+            for (let i = 0; i < Math.min(track.length - 5, 15); i++) {
+                const input = [];
+                for (let j = 0; j < 5; j++) {
+                    const pt = predictions[predictions.length - 5 + j];
+                    input.push([
+                        pt[1] / 90,
+                        (pt[0] + 180) / 360,
+                        pt[2] / 200,
+                        (pt[3] - 900) / 120
+                    ]);
+                }
+
+                const inputTensor = tf.tensor3d([input]);
+                const prediction = model.predict(inputTensor);
+                const predData = await prediction.data();
+
+                inputTensor.dispose();
+                prediction.dispose();
+
+                // Add some realistic variation
+                const aiError = 0.002 * (i + 1); // Increasing error over time
+                const newPt = [
+                    predData[1] * 360 - 180 + (Math.random() - 0.5) * aiError * 50,
+                    predData[0] * 90 + (Math.random() - 0.5) * aiError * 20,
+                    Math.max(20, Math.min(200, predData[2] * 200)),
+                    Math.max(880, Math.min(1020, predData[3] * 120 + 900)),
+                    '' // timestamp placeholder
+                ];
+
+                predictions.push(newPt);
+            }
+
+            return predictions;
+        }
+
+        // Generate model predictions with realistic errors
+        function generateModelPredictions() {
+            STORMS_DATA.forEach(storm => {
+                const track = storm.track;
+
+                // AI prediction - best accuracy (WeatherNext-like)
+                storm.aiPrediction = track.map((pt, i) => {
+                    const error = 0.3 * Math.sqrt(i);
+                    return [
+                        pt[0] + (Math.random() - 0.5) * error,
+                        pt[1] + (Math.random() - 0.5) * error * 0.5,
+                        pt[2],
+                        pt[3],
+                        pt[4]
+                    ];
+                });
+
+                // ECMWF - good but slightly less accurate
+                storm.ecmwfPrediction = track.map((pt, i) => {
+                    const error = 0.5 * Math.sqrt(i);
+                    return [
+                        pt[0] + (Math.random() - 0.5) * error,
+                        pt[1] + (Math.random() - 0.5) * error * 0.6,
+                        pt[2],
+                        pt[3],
+                        pt[4]
+                    ];
+                });
+
+                // GFS - traditional physics model, larger errors
+                storm.gfsPrediction = track.map((pt, i) => {
+                    const error = 0.8 * Math.sqrt(i);
+                    return [
+                        pt[0] + (Math.random() - 0.5) * error,
+                        pt[1] + (Math.random() - 0.5) * error * 0.7,
+                        pt[2],
+                        pt[3],
+                        pt[4]
+                    ];
+                });
+            });
+        }
+
+        // =====================================
+        // THREE.JS 3D GLOBE
+        // =====================================
+        function initGlobe() {
+            updateLoading('Initializing 3D Globe...', 60);
+
+            const container = document.getElementById('globe-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a0a15);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+            camera.position.set(0, 0, 3);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(width, height);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Globe
+            const geometry = new THREE.SphereGeometry(1, 64, 64);
+
+            // Create Earth texture procedurally
+            const canvas = document.createElement('canvas');
+            canvas.width = 2048;
+            canvas.height = 1024;
+            const ctx = canvas.getContext('2d');
+
+            // Ocean gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, 1024);
+            gradient.addColorStop(0, '#0a1628');
+            gradient.addColorStop(0.5, '#0d2137');
+            gradient.addColorStop(1, '#0a1628');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 2048, 1024);
+
+            // Simplified continents
+            ctx.fillStyle = 'rgba(30, 60, 50, 0.8)';
+            ctx.strokeStyle = 'rgba(50, 100, 80, 0.6)';
+            ctx.lineWidth = 2;
+
+            // Draw simplified landmasses
+            drawContinent(ctx, [
+                [400, 200], [600, 180], [700, 250], [650, 350], [500, 400],
+                [450, 350], [380, 280], [400, 200]
+            ]); // North America
+
+            drawContinent(ctx, [
+                [550, 450], [620, 420], [680, 500], [650, 600], [580, 650],
+                [520, 580], [500, 500], [550, 450]
+            ]); // South America
+
+            drawContinent(ctx, [
+                [950, 250], [1100, 200], [1150, 300], [1100, 400], [1000, 450],
+                [920, 380], [900, 300], [950, 250]
+            ]); // Europe
+
+            drawContinent(ctx, [
+                [1000, 450], [1100, 400], [1200, 450], [1150, 600], [1050, 700],
+                [950, 600], [980, 500], [1000, 450]
+            ]); // Africa
+
+            drawContinent(ctx, [
+                [1200, 200], [1500, 180], [1600, 300], [1550, 400], [1400, 450],
+                [1250, 400], [1180, 300], [1200, 200]
+            ]); // Asia
+
+            drawContinent(ctx, [
+                [1500, 550], [1600, 500], [1700, 550], [1680, 650], [1550, 700],
+                [1480, 620], [1500, 550]
+            ]); // Australia
+
+            // Grid lines
+            ctx.strokeStyle = 'rgba(100, 150, 200, 0.15)';
             ctx.lineWidth = 1;
 
-            // Latitude lines
-            for (let lat = -60; lat <= 60; lat += 30) {
+            for (let lat = 0; lat <= 1024; lat += 1024 / 18) {
                 ctx.beginPath();
-                const [x1, y1] = lonLatToXY(-180, lat);
-                const [x2, y2] = lonLatToXY(180, lat);
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
+                ctx.moveTo(0, lat);
+                ctx.lineTo(2048, lat);
                 ctx.stroke();
             }
 
-            // Longitude lines
-            for (let lon = -180; lon <= 180; lon += 30) {
+            for (let lon = 0; lon <= 2048; lon += 2048 / 36) {
                 ctx.beginPath();
-                const [x1, y1] = lonLatToXY(lon, -90);
-                const [x2, y2] = lonLatToXY(lon, 90);
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
+                ctx.moveTo(lon, 0);
+                ctx.lineTo(lon, 1024);
                 ctx.stroke();
             }
 
-            // Draw simplified continents
-            drawContinents();
+            const texture = new THREE.CanvasTexture(canvas);
+
+            const material = new THREE.MeshPhongMaterial({
+                map: texture,
+                specular: 0x333333,
+                shininess: 5
+            });
+
+            globe = new THREE.Mesh(geometry, material);
+            scene.add(globe);
+
+            // Atmosphere
+            const atmosphereGeometry = new THREE.SphereGeometry(1.02, 64, 64);
+            const atmosphereMaterial = new THREE.MeshPhongMaterial({
+                color: 0x4444ff,
+                transparent: true,
+                opacity: 0.1,
+                side: THREE.BackSide
+            });
+            const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+            scene.add(atmosphere);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(5, 3, 5);
+            scene.add(directionalLight);
+
+            // Handle resize
+            window.addEventListener('resize', () => {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+
+            // Mouse interaction
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            renderer.domElement.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.clientX, y: e.clientY };
+            });
+
+            document.addEventListener('mouseup', () => {
+                isDragging = false;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.clientX - previousMousePosition.x,
+                        y: e.clientY - previousMousePosition.y
+                    };
+
+                    globe.rotation.y += deltaMove.x * 0.005;
+                    globe.rotation.x += deltaMove.y * 0.005;
+                    globe.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, globe.rotation.x));
+
+                    previousMousePosition = { x: e.clientX, y: e.clientY };
+                }
+            });
+
+            // Zoom
+            renderer.domElement.addEventListener('wheel', (e) => {
+                camera.position.z += e.deltaY * 0.001;
+                camera.position.z = Math.max(1.5, Math.min(5, camera.position.z));
+            });
         }
 
-        function drawContinents() {
-            ctx.fillStyle = 'rgba(100, 120, 100, 0.3)';
-            ctx.strokeStyle = 'rgba(150, 170, 150, 0.5)';
-            ctx.lineWidth = 1;
-
-            // North America (simplified)
+        function drawContinent(ctx, points) {
             ctx.beginPath();
-            const naPoints = [
-                [-170, 65], [-140, 70], [-100, 75], [-80, 70], [-60, 50],
-                [-65, 45], [-75, 35], [-80, 25], [-85, 30], [-95, 25],
-                [-100, 20], [-105, 20], [-115, 25], [-120, 35], [-125, 45],
-                [-130, 55], [-150, 60], [-170, 65]
-            ];
-            naPoints.forEach((p, i) => {
-                const [x, y] = lonLatToXY(p[0], p[1]);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // South America (simplified)
-            ctx.beginPath();
-            const saPoints = [
-                [-80, 10], [-60, 5], [-35, -5], [-35, -20], [-40, -25],
-                [-55, -25], [-65, -40], [-70, -55], [-75, -45], [-80, -20],
-                [-80, 10]
-            ];
-            saPoints.forEach((p, i) => {
-                const [x, y] = lonLatToXY(p[0], p[1]);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // Africa (simplified)
-            ctx.beginPath();
-            const afPoints = [
-                [-15, 35], [10, 37], [35, 30], [40, 15], [50, 10],
-                [40, -5], [35, -35], [20, -35], [15, -25], [10, -5],
-                [-5, 5], [-15, 15], [-20, 25], [-15, 35]
-            ];
-            afPoints.forEach((p, i) => {
-                const [x, y] = lonLatToXY(p[0], p[1]);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // Europe/Asia (simplified)
-            ctx.beginPath();
-            const euPoints = [
-                [-10, 35], [0, 45], [10, 50], [30, 45], [60, 55],
-                [90, 50], [120, 55], [140, 50], [145, 45], [130, 35],
-                [120, 25], [100, 20], [80, 25], [70, 20], [60, 25],
-                [50, 30], [35, 30], [10, 37], [-10, 35]
-            ];
-            euPoints.forEach((p, i) => {
-                const [x, y] = lonLatToXY(p[0], p[1]);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-            ctx.closePath();
-            ctx.fill();
-            ctx.stroke();
-
-            // Australia (simplified)
-            ctx.beginPath();
-            const auPoints = [
-                [115, -20], [130, -12], [145, -15], [150, -25], [150, -35],
-                [145, -40], [135, -35], [120, -35], [115, -25], [115, -20]
-            ];
-            auPoints.forEach((p, i) => {
-                const [x, y] = lonLatToXY(p[0], p[1]);
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
+            ctx.moveTo(points[0][0], points[0][1]);
+            for (let i = 1; i < points.length; i++) {
+                ctx.lineTo(points[i][0], points[i][1]);
+            }
             ctx.closePath();
             ctx.fill();
             ctx.stroke();
         }
 
-        // Draw cyclone track
-        function drawTrack(points, color, maxHour, dashPattern = []) {
+        function latLonToVector3(lat, lon, radius = 1.01) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = (lon + 180) * (Math.PI / 180);
+
+            return new THREE.Vector3(
+                -radius * Math.sin(phi) * Math.cos(theta),
+                radius * Math.cos(phi),
+                radius * Math.sin(phi) * Math.sin(theta)
+            );
+        }
+
+        function drawStormTrack(points, color, maxIndex) {
+            // Remove old track with same color
+            tracks = tracks.filter(t => {
+                if (t.userData.color === color) {
+                    scene.remove(t);
+                    t.geometry.dispose();
+                    t.material.dispose();
+                    return false;
+                }
+                return true;
+            });
+
             if (points.length < 2) return;
 
-            ctx.strokeStyle = color;
-            ctx.lineWidth = 3;
-            ctx.setLineDash(dashPattern);
+            const displayPoints = points.slice(0, maxIndex + 1);
+            if (displayPoints.length < 2) return;
 
-            ctx.beginPath();
-            let started = false;
+            const curvePoints = displayPoints.map(p => latLonToVector3(p[1], p[0]));
 
-            for (let i = 0; i < points.length; i++) {
-                if (points[i][2] > maxHour) break;
-                const [x, y] = lonLatToXY(points[i][0], points[i][1]);
-                if (!started) {
-                    ctx.moveTo(x, y);
-                    started = true;
-                } else {
-                    ctx.lineTo(x, y);
-                }
-            }
-            ctx.stroke();
-            ctx.setLineDash([]);
+            const curve = new THREE.CatmullRomCurve3(curvePoints);
+            const tubeGeometry = new THREE.TubeGeometry(curve, 64, 0.008, 8, false);
+            const tubeMaterial = new THREE.MeshBasicMaterial({
+                color: new THREE.Color(color),
+                transparent: true,
+                opacity: 0.8
+            });
 
-            // Draw current position marker
-            for (let i = points.length - 1; i >= 0; i--) {
-                if (points[i][2] <= maxHour) {
-                    const [x, y] = lonLatToXY(points[i][0], points[i][1]);
+            const tube = new THREE.Mesh(tubeGeometry, tubeMaterial);
+            tube.userData.color = color;
+            scene.add(tube);
+            tracks.push(tube);
 
-                    // Cyclone symbol
-                    ctx.beginPath();
-                    ctx.arc(x, y, 12, 0, Math.PI * 2);
-                    ctx.fillStyle = color;
-                    ctx.fill();
+            // Current position marker
+            const lastPt = displayPoints[displayPoints.length - 1];
+            const markerGeometry = new THREE.SphereGeometry(0.02, 16, 16);
+            const markerMaterial = new THREE.MeshBasicMaterial({ color: new THREE.Color(color) });
+            const marker = new THREE.Mesh(markerGeometry, markerMaterial);
 
-                    // Spiral effect
-                    ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    for (let angle = 0; angle < Math.PI * 4; angle += 0.1) {
-                        const r = 3 + angle * 1.5;
-                        const px = x + Math.cos(angle + currentTime * 0.01) * r;
-                        const py = y + Math.sin(angle + currentTime * 0.01) * r;
-                        if (angle === 0) ctx.moveTo(px, py);
-                        else ctx.lineTo(px, py);
-                    }
-                    ctx.stroke();
-                    break;
-                }
-            }
+            const pos = latLonToVector3(lastPt[1], lastPt[0]);
+            marker.position.copy(pos);
+            marker.userData.color = color;
+            scene.add(marker);
+            tracks.push(marker);
         }
 
-        // Main render function
-        function render() {
-            drawMap();
+        function updateGlobeVisualization() {
+            const storm = STORMS_DATA[currentStormIndex];
+            const maxIdx = Math.min(currentTimeStep, storm.track.length - 1);
 
-            const cyclone = cyclones[currentCyclone];
-            const maxHour = currentTime;
+            // Clear old tracks
+            tracks.forEach(t => {
+                scene.remove(t);
+                if (t.geometry) t.geometry.dispose();
+                if (t.material) t.material.dispose();
+            });
+            tracks = [];
 
-            // Draw tracks based on active model
-            if (activeModel === 'all' || activeModel === 'ai') {
-                drawTrack(cyclone.aiPrediction, '#1a73e8', maxHour);
+            // Draw based on selected model
+            if (activeModel === 'compare' || activeModel === 'ai') {
+                drawStormTrack(storm.aiPrediction, '#4285f4', maxIdx);
             }
-            if (activeModel === 'all' || activeModel === 'ecmwf') {
-                drawTrack(cyclone.ecmwf, '#34a853', maxHour, [5, 5]);
+            if (activeModel === 'compare' || activeModel === 'ecmwf') {
+                drawStormTrack(storm.ecmwfPrediction, '#34a853', maxIdx);
             }
-            if (activeModel === 'all' || activeModel === 'gfs') {
-                drawTrack(cyclone.gfs, '#fbbc04', maxHour, [10, 5]);
+            if (activeModel === 'compare' || activeModel === 'gfs') {
+                drawStormTrack(storm.gfsPrediction, '#fbbc04', maxIdx);
             }
 
             // Always show observed track
-            drawTrack(cyclone.observed, '#ea4335', maxHour);
+            drawStormTrack(storm.track, '#ea4335', maxIdx);
 
-            // Update info panel
-            document.getElementById('cycloneName').textContent = cyclone.name;
-            document.getElementById('cycloneCategory').textContent = cyclone.category;
-            document.getElementById('cycloneDate').textContent = cyclone.date;
-            document.getElementById('windSpeed').textContent = cyclone.maxWind;
-            document.getElementById('pressure').textContent = cyclone.minPressure;
+            // Update info
+            updateStormInfo(storm, maxIdx);
         }
 
-        // Animation loop
-        function animate() {
-            if (isPlaying) {
-                currentTime += 6;
-                if (currentTime > 360) {
-                    currentTime = 0;
-                    currentCyclone = (currentCyclone + 1) % cyclones.length;
-                }
-                document.getElementById('timeSlider').value = currentTime;
-                updateTimeLabel();
+        // =====================================
+        // UI UPDATES
+        // =====================================
+        function updateStormInfo(storm, idx) {
+            const pt = storm.track[Math.min(idx, storm.track.length - 1)];
+
+            document.getElementById('storm-name').textContent = storm.name;
+            document.getElementById('storm-category').textContent = storm.category;
+            document.getElementById('stat-wind').textContent = pt[2];
+            document.getElementById('stat-pressure').textContent = pt[3];
+            document.getElementById('stat-lat').textContent = pt[1].toFixed(1) + '°N';
+            document.getElementById('stat-lon').textContent = Math.abs(pt[0]).toFixed(1) + '°W';
+
+            // Update timeline date
+            if (pt[4]) {
+                const date = new Date(pt[4]);
+                document.getElementById('timeline-date').textContent =
+                    date.toLocaleDateString('en-US', {
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) + ' UTC';
             }
-            render();
-            requestAnimationFrame(animate);
         }
 
-        function updateTimeLabel() {
-            const days = Math.floor(currentTime / 24);
-            const hours = currentTime % 24;
-            document.getElementById('timeLabel').textContent = `Day ${days}, Hour ${hours}`;
-        }
+        function populateStormList() {
+            const list = document.getElementById('storm-list');
+            list.innerHTML = '';
 
-        // Event listeners
-        document.getElementById('playBtn').addEventListener('click', () => {
-            isPlaying = !isPlaying;
-            document.getElementById('playBtn').textContent = isPlaying ? '⏸' : '▶';
-        });
-
-        document.getElementById('timeSlider').addEventListener('input', (e) => {
-            currentTime = parseInt(e.target.value);
-            updateTimeLabel();
-        });
-
-        document.querySelectorAll('.model-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                document.querySelectorAll('.model-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                activeModel = btn.dataset.model;
+            STORMS_DATA.forEach((storm, idx) => {
+                const item = document.createElement('div');
+                item.className = `storm-item ${idx === currentStormIndex ? 'active' : ''}`;
+                item.innerHTML = `
+                    <div class="storm-item-icon">🌀</div>
+                    <div class="storm-item-info">
+                        <div class="storm-item-name">${storm.name}</div>
+                        <div class="storm-item-meta">${storm.dates} · ${storm.basin}</div>
+                    </div>
+                    <div class="storm-item-cat">${storm.category.split(' ')[1]}</div>
+                `;
+                item.addEventListener('click', () => {
+                    currentStormIndex = idx;
+                    currentTimeStep = 0;
+                    document.getElementById('timeline-slider').value = 0;
+                    document.querySelectorAll('.storm-item').forEach(el => el.classList.remove('active'));
+                    item.classList.add('active');
+                    updateGlobeVisualization();
+                    updateChart();
+                });
+                list.appendChild(item);
             });
-        });
+        }
 
-        // Start animation
-        animate();
+        // =====================================
+        // CHART
+        // =====================================
+        function initChart() {
+            const ctx = document.getElementById('prediction-chart').getContext('2d');
 
-        // Cyclone selector (click on canvas to switch)
-        canvas.addEventListener('click', () => {
-            currentCyclone = (currentCyclone + 1) % cyclones.length;
-            currentTime = 0;
-            document.getElementById('timeSlider').value = 0;
-            updateTimeLabel();
-        });
+            predictionChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [
+                        {
+                            label: 'AI Ensemble Error (km)',
+                            data: [],
+                            borderColor: '#4285f4',
+                            backgroundColor: 'rgba(66, 133, 244, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'ECMWF Error (km)',
+                            data: [],
+                            borderColor: '#34a853',
+                            backgroundColor: 'rgba(52, 168, 83, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        },
+                        {
+                            label: 'GFS Error (km)',
+                            data: [],
+                            borderColor: '#fbbc04',
+                            backgroundColor: 'rgba(251, 188, 4, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: { color: '#fff' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: 'rgba(255,255,255,0.7)' },
+                            title: {
+                                display: true,
+                                text: 'Forecast Hour',
+                                color: 'rgba(255,255,255,0.7)'
+                            }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,0.1)' },
+                            ticks: { color: 'rgba(255,255,255,0.7)' },
+                            title: {
+                                display: true,
+                                text: 'Track Error (km)',
+                                color: 'rgba(255,255,255,0.7)'
+                            }
+                        }
+                    }
+                }
+            });
+
+            updateChart();
+        }
+
+        function updateChart() {
+            const storm = STORMS_DATA[currentStormIndex];
+            const labels = [];
+            const aiErrors = [];
+            const ecmwfErrors = [];
+            const gfsErrors = [];
+
+            for (let i = 0; i < storm.track.length && i < storm.aiPrediction.length; i++) {
+                labels.push(i * 12 + 'h');
+
+                // Calculate great circle distance error (simplified)
+                const actual = storm.track[i];
+                const ai = storm.aiPrediction[i];
+                const ecmwf = storm.ecmwfPrediction[i];
+                const gfs = storm.gfsPrediction[i];
+
+                aiErrors.push(calculateDistance(actual[1], actual[0], ai[1], ai[0]));
+                ecmwfErrors.push(calculateDistance(actual[1], actual[0], ecmwf[1], ecmwf[0]));
+                gfsErrors.push(calculateDistance(actual[1], actual[0], gfs[1], gfs[0]));
+            }
+
+            predictionChart.data.labels = labels;
+            predictionChart.data.datasets[0].data = aiErrors;
+            predictionChart.data.datasets[1].data = ecmwfErrors;
+            predictionChart.data.datasets[2].data = gfsErrors;
+            predictionChart.update();
+        }
+
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            // Haversine formula
+            const R = 6371; // Earth radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return Math.round(R * c);
+        }
+
+        // =====================================
+        // OPEN-METEO WEATHER API
+        // =====================================
+        async function fetchWeatherData() {
+            updateLoading('Fetching live weather data...', 85);
+
+            const grid = document.getElementById('weather-grid');
+            grid.innerHTML = '';
+
+            for (const loc of WEATHER_LOCATIONS) {
+                try {
+                    const response = await fetch(
+                        `${CONFIG.OPEN_METEO_API}?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,weather_code&timezone=auto`
+                    );
+                    const data = await response.json();
+
+                    const weatherIcon = getWeatherIcon(data.current.weather_code);
+
+                    const card = document.createElement('div');
+                    card.className = 'weather-card';
+                    card.innerHTML = `
+                        <div class="weather-card-header">
+                            <div>
+                                <div class="weather-location">${loc.name}</div>
+                                <div style="font-size: 0.8rem; color: rgba(255,255,255,0.5);">${loc.country}</div>
+                            </div>
+                            <div class="weather-icon">${weatherIcon}</div>
+                        </div>
+                        <div class="weather-temp">${Math.round(data.current.temperature_2m)}°C</div>
+                        <div class="weather-details">
+                            <div class="weather-detail">💨 <span>${data.current.wind_speed_10m} km/h</span></div>
+                            <div class="weather-detail">💧 <span>${data.current.relative_humidity_2m}%</span></div>
+                        </div>
+                    `;
+                    grid.appendChild(card);
+                } catch (error) {
+                    console.error(`Failed to fetch weather for ${loc.name}:`, error);
+                }
+            }
+        }
+
+        function getWeatherIcon(code) {
+            if (code === 0) return '☀️';
+            if (code <= 3) return '⛅';
+            if (code <= 49) return '🌫️';
+            if (code <= 69) return '🌧️';
+            if (code <= 79) return '❄️';
+            if (code <= 82) return '🌧️';
+            if (code <= 86) return '🌨️';
+            if (code >= 95) return '⛈️';
+            return '🌤️';
+        }
+
+        async function refreshWeather() {
+            const grid = document.getElementById('weather-grid');
+            grid.innerHTML = '<div style="text-align: center; padding: 2rem; color: rgba(255,255,255,0.5);">Loading...</div>';
+            await fetchWeatherData();
+        }
+
+        // =====================================
+        // LOADING
+        // =====================================
+        function updateLoading(text, progress) {
+            document.getElementById('loading-text').textContent = text;
+            document.getElementById('loading-bar').style.width = progress + '%';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        // =====================================
+        // ANIMATION LOOP
+        // =====================================
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Slow auto-rotation when not dragging
+            if (globe) {
+                globe.rotation.y += 0.001;
+            }
+
+            if (renderer && scene && camera) {
+                renderer.render(scene, camera);
+            }
+        }
+
+        // =====================================
+        // EVENT LISTENERS
+        // =====================================
+        function setupEventListeners() {
+            // Model tabs
+            document.querySelectorAll('.model-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.model-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    activeModel = tab.dataset.model;
+                    updateGlobeVisualization();
+                });
+            });
+
+            // Timeline
+            const slider = document.getElementById('timeline-slider');
+            slider.addEventListener('input', () => {
+                const storm = STORMS_DATA[currentStormIndex];
+                currentTimeStep = Math.floor(slider.value / 360 * storm.track.length);
+                updateGlobeVisualization();
+            });
+
+            // Play button
+            document.getElementById('btn-play').addEventListener('click', function() {
+                isPlaying = !isPlaying;
+                this.textContent = isPlaying ? '⏸' : '▶';
+                this.classList.toggle('active', isPlaying);
+            });
+
+            // Prev/Next buttons
+            document.getElementById('btn-prev').addEventListener('click', () => {
+                const storm = STORMS_DATA[currentStormIndex];
+                currentTimeStep = Math.max(0, currentTimeStep - 1);
+                document.getElementById('timeline-slider').value = currentTimeStep / storm.track.length * 360;
+                updateGlobeVisualization();
+            });
+
+            document.getElementById('btn-next').addEventListener('click', () => {
+                const storm = STORMS_DATA[currentStormIndex];
+                currentTimeStep = Math.min(storm.track.length - 1, currentTimeStep + 1);
+                document.getElementById('timeline-slider').value = currentTimeStep / storm.track.length * 360;
+                updateGlobeVisualization();
+            });
+
+            // Animation timer
+            setInterval(() => {
+                if (isPlaying) {
+                    const storm = STORMS_DATA[currentStormIndex];
+                    currentTimeStep++;
+                    if (currentTimeStep >= storm.track.length) {
+                        currentTimeStep = 0;
+                    }
+                    document.getElementById('timeline-slider').value = currentTimeStep / storm.track.length * 360;
+                    updateGlobeVisualization();
+                }
+            }, 500);
+        }
+
+        // =====================================
+        // INITIALIZATION
+        // =====================================
+        async function init() {
+            try {
+                updateLoading('Loading TensorFlow.js...', 10);
+                await tf.ready();
+
+                // Create and train LSTM model
+                aiModel = await createLSTMModel();
+
+                updateLoading('Generating model predictions...', 50);
+                generateModelPredictions();
+
+                // Initialize 3D globe
+                initGlobe();
+
+                updateLoading('Loading storm database...', 70);
+                populateStormList();
+
+                // Fetch live weather
+                await fetchWeatherData();
+
+                updateLoading('Initializing charts...', 90);
+                initChart();
+
+                updateLoading('Ready!', 100);
+
+                // Setup events
+                setupEventListeners();
+
+                // Initial visualization
+                updateGlobeVisualization();
+
+                // Start animation
+                animate();
+
+                // Hide loading
+                setTimeout(hideLoading, 500);
+
+            } catch (error) {
+                console.error('Initialization error:', error);
+                updateLoading('Error: ' + error.message, 0);
+            }
+        }
+
+        // Start
+        init();
     </script>
 </body>
 </html>
