@@ -1,6 +1,7 @@
 # WeatherNext Lab
 
 **AI-Powered Weather & Cyclone Prediction Visualization**
+<img width="1872" height="928" alt="image" src="https://github.com/user-attachments/assets/edf8a4cb-d897-4181-9479-24afffc78cf0" />
 
 A sophisticated web application demonstrating AI weather prediction capabilities, inspired by [Google DeepMind's WeatherNext](https://deepmind.google/science/weathernext/).
 
